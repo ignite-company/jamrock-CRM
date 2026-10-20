@@ -35,6 +35,35 @@ const TABS = [
   { id: "tasks", label: "Follow-ups", icon: ListTodo },
   { id: "settings", label: "Settings", icon: Settings }
 ];
+const FOLLOW_UP_CATEGORIES = [
+  {id:"follow_up",label:"Follow-up scheduled"},
+  {id:"no_answer",label:"No answer, first attempt"},
+  {id:"unresponsive",label:"Not responding"},
+  {id:"waiting_on_customer",label:"Waiting on customer"}
+];
+const followCategory = id => FOLLOW_UP_CATEGORIES.find(c=>c.id===id)?.label||"Follow-up scheduled";
+const leadReceived = value => value ? new Intl.DateTimeFormat("en-US",{
+  timeZone:"America/New_York",weekday:"short",month:"short",day:"numeric",year:"numeric",
+  hour:"numeric",minute:"2-digit",timeZoneName:"short"
+}).format(new Date(value)) : "Unknown";
+const leadAge=(value,now)=>{
+  if(!value)return "";
+  const ms=now-new Date(value).getTime();
+  if(!Number.isFinite(ms))return "";
+  if(ms<60000)return "Just now";
+  const mins=Math.floor(ms/60000);
+  if(mins<60)return mins+"m ago";
+  const hrs=Math.floor(mins/60);
+  if(hrs<24)return hrs+"h ago";
+  const days=Math.floor(hrs/24);
+  if(days<30)return days+"d ago";
+  return Math.floor(days/30)+"mo ago";
+};
+const localDateTimeInput = value => {
+  const d = new Date(value);
+  const pad = n => String(n).padStart(2,"0");
+  return d.getFullYear()+"-"+pad(d.getMonth()+1)+"-"+pad(d.getDate())+"T"+pad(d.getHours())+":"+pad(d.getMinutes());
+};
 const DAY = 86400000;
 const dateOffset = (n) => new Date(Date.now() + n * DAY).toISOString();
 const samples = {
@@ -106,6 +135,9 @@ function App(){
  const[month,setMonth]=useState(new Date(new Date().getFullYear(),new Date().getMonth(),1));
  const[recordView,setRecordView]=useState("jobs");
  const[recordFilter,setRecordFilter]=useState("all");
+ const[taskCategoryFilter,setTaskCategoryFilter]=useState("all");
+ const[now,setNow]=useState(Date.now());
+ useEffect(()=>{const id=window.setInterval(()=>setNow(Date.now()),60000);return()=>window.clearInterval(id);},[]);
  useEffect(()=>{if(!connected)return;db.auth.getSession().then(({data})=>{setSession(data.session);setAuthLoading(false);});const{data:{subscription}}=db.auth.onAuthStateChange((_ev,s)=>setSession(s));return()=>subscription.unsubscribe();},[]);
  useEffect(()=>{if(!connected){localStorage.setItem("jamrock_demo_contacts",JSON.stringify(contacts));}},[contacts]);
  useEffect(()=>{if(!connected){localStorage.setItem("jamrock_demo_jobs",JSON.stringify(jobs));}},[jobs]);
@@ -150,10 +182,25 @@ function App(){
  const booked=jobs.filter(j=>j.stage==="booked").length;
  const revenue=jobs.filter(j=>j.stage==="completed").reduce((s,j)=>s+Number(j.final_amount??j.estimate_amount??0),0);
  const openTasks=tasks.filter(t=>!t.completed).sort((a,b)=>new Date(a.due_at)-new Date(b.due_at));
+ const visibleTasks=tasks.filter(t=>taskCategoryFilter==="all"||(t.category||"follow_up")===taskCategoryFilter);
+ const filteredOpenTasks=visibleTasks.filter(t=>!t.completed).sort((a,b)=>new Date(a.due_at)-new Date(b.due_at));
+ const filteredDoneTasks=visibleTasks.filter(t=>t.completed);
+ const completedCustomerIds=new Set(jobs.filter(j=>j.stage==="completed").map(j=>j.contact_id));
+ const completedCustomers=contacts.filter(c=>completedCustomerIds.has(c.id));
  const upcomingJobs=jobs.filter(j=>j.stage==="booked"&&j.scheduled_at).sort((a,b)=>new Date(a.scheduled_at)-new Date(b.scheduled_at));
  function changeTab(id){setTab(id);setMobileNav(false);setQuery("");}
  function openModal(type,data={}){
   setError("");setForm(data);setModal(type);
+ }
+ function openFollowUpFromLead(job){
+  const contact=person(job.contact_id);
+  openModal("task",{
+    title:"Follow up with "+(contact?.name||"lead"),
+    category:"no_answer",contact_id:job.contact_id,job_id:job.id,
+    notes:job.notes||contact?.notes||"",
+    due_at:localDateTimeInput(Date.now()+DAY),
+    completed:false
+  });
  }
  async function upsert(table,payload,localSetter) {
   const data={...payload,id:payload.id||uuid()};
@@ -173,7 +220,7 @@ function App(){
    }
    if(modal==="contact")await upsert("contacts",{id:form.id,name:form.name.trim(),phone:form.phone||"",email:form.email||"",address:form.address||"",notes:form.notes||""},setContacts);
    if(modal==="job")await upsert("jobs",{id:form.id,contact_id:form.contact_id,service:form.service||"Junk removal",source:form.source||"Other",stage:form.stage||"new",estimate_amount:form.estimate_amount===""||form.estimate_amount==null?null:Number(form.estimate_amount),final_amount:form.final_amount===""||form.final_amount==null?null:Number(form.final_amount),scheduled_at:form.scheduled_at?new Date(form.scheduled_at).toISOString():null,notes:form.notes||"",lead_details:form.lead_details||{},created_at:form.created_at||new Date().toISOString()},setJobs);
-   if(modal==="task")await upsert("tasks",{id:form.id,title:form.title.trim(),contact_id:form.contact_id||null,job_id:form.job_id||null,due_at:form.due_at?new Date(form.due_at).toISOString():new Date().toISOString(),completed:Boolean(form.completed),created_at:form.created_at||new Date().toISOString()},setTasks);
+   if(modal==="task")await upsert("tasks",{id:form.id,title:form.title.trim(),category:form.category||"follow_up",notes:form.notes||"",contact_id:form.contact_id||null,job_id:form.job_id||null,due_at:form.due_at?new Date(form.due_at).toISOString():new Date().toISOString(),completed:Boolean(form.completed),created_at:form.created_at||new Date().toISOString()},setTasks);
    setModal(null);setToast("Saved successfully");if(connected)await reload();
   }catch(e){setError(e.message||"Could not save. Please try again.");}finally{setSaving(false);}
  }
@@ -193,7 +240,7 @@ function App(){
   dashboard:["Good "+(new Date().getHours()<12?"morning":new Date().getHours()<17?"afternoon":"evening")+", Jamrock","Here's what's happening across your business."],
   pipeline:["Lead pipeline","Move every inquiry from first contact to completed job."],
   jobs:["Jobs & estimates","Quotes and confirmed work, without the lead pipeline clutter."],
-  customers:["Customers","Your customer details and job history, in one place."],
+  customers:["Customers","Only customers with completed jobs appear here, with their job history."],
   calendar:["Job calendar","Know what is scheduled and what's coming up."],
   tasks:["Follow-ups","Never forget to call, text or check in."],
   settings:["Workspace settings","Your business tools, integrations and information."]
@@ -201,7 +248,20 @@ function App(){
  function jobRow(j){
   const c=person(j.contact_id);return <div className="job-row" key={j.id}><div className="avatar">{initials(c?.name)}</div><div className="job-main"><button className="link-title" onClick={()=>openModal("job",{...j,scheduled_at:j.scheduled_at?new Date(j.scheduled_at).toISOString().slice(0,16):""})}>{c?.name||"Customer"}</button><span>{j.service} <span className="mid-dot">·</span> {j.source||"Other"}</span></div><div className="job-money">{j.estimate_amount==null?"No estimate":money(j.estimate_amount)}</div><Pill stage={j.stage}/><button className="icon-btn light" title="Edit job" onClick={()=>openModal("job",{...j,scheduled_at:j.scheduled_at?new Date(j.scheduled_at).toISOString().slice(0,16):""})}><ArrowUpRight size={17}/></button></div>;
  }
- function taskRow(t){const c=person(t.contact_id);return <div key={t.id} className={"task-row "+(t.completed?"task-done":"")}><button title={t.completed?"Mark pending":"Mark done"} aria-label={t.completed?"Mark pending":"Mark done"} onClick={()=>toggleTask(t)} className={"task-check "+(t.completed?"is-done":"")}>{t.completed?<Check size={15}/>:null}</button><div className="task-body"><b>{t.title}</b><span>{c?.name?c.name+" · ":""}Due {shortDate(t.due_at)}</span></div><button className="icon-btn light" aria-label="Edit follow-up" onClick={()=>openModal("task",{...t,due_at:t.due_at?new Date(t.due_at).toISOString().slice(0,16):""})}><Pencil size={15}/></button></div>;}
+ function taskRow(t){
+  const c=person(t.contact_id);
+  const job=jobs.find(j=>j.id===t.job_id);
+  return <div key={t.id} className={"task-row categorized-task "+(t.completed?"task-done":"")}>
+    <button title={t.completed?"Mark pending":"Mark done"} aria-label={t.completed?"Mark pending":"Mark done"} onClick={()=>toggleTask(t)} className={"task-check "+(t.completed?"is-done":"")}>{t.completed?<Check size={15}/>:null}</button>
+    <div className="task-body">
+     <div className="task-header"><b>{t.title}</b><span className={"followup-tag followup-"+(t.category||"follow_up")}>{followCategory(t.category)}</span></div>
+     <span>{c?.name?c.name+" · ":""}Due {fullDate(t.due_at)}</span>
+     {t.notes&&<p className="task-latest-note"><strong>Latest note:</strong> {t.notes}</p>}
+     {job&&<button className="task-related-link" onClick={()=>editJob(job)}>Open lead <ArrowUpRight size={13}/></button>}
+    </div>
+    <button className="icon-btn light" aria-label="Edit follow-up" onClick={()=>openModal("task",{...t,due_at:localDateTimeInput(t.due_at||Date.now())})}><Pencil size={15}/></button>
+  </div>;
+ }
  function newJobForm(){openModal("job",{contact_id:contacts[0]?.id||"",service:"Junk removal",stage:"booked",source:"Phone"});}
  function newEstimateForm(){openModal("job",{contact_id:contacts[0]?.id||"",service:"Junk removal",stage:"estimate_sent",source:"Phone"});}
  function editJob(j,updates={}){openModal("job",{...j,...updates,scheduled_at:j.scheduled_at?new Date(j.scheduled_at).toISOString().slice(0,16):""});}
@@ -268,8 +328,19 @@ function App(){
       </section>
       <p className="record-footer-note"><CircleDot size={16}/> Lead stages stay in the Lead pipeline. This page focuses on estimates and confirmed work.</p>
      </div>}
-     {tab==="customers"&&<section className="panel list-panel"><div className="panel-top"><div><h2>Customer directory</h2><p>{contacts.length} customer profiles</p></div><button onClick={()=>openModal("contact",{})} className="btn btn-outline"><Plus size={16}/> Add customer</button></div><div className="table-tools"><div className="search-field"><Search size={17}/><input value={query} onChange={e=>setQuery(e.target.value)} placeholder="Find by name, number or address…"/></div></div><div className="contact-grid">{filtered(contacts,"contacts").map(c=><div className="contact-card" key={c.id}><div className="contact-top"><div className="avatar">{initials(c.name)}</div><button aria-label="Edit customer" className="icon-btn light" onClick={()=>openModal("contact",{...c})}><Pencil size={16}/></button></div><h3>{c.name}</h3><div className="contact-meta">{c.phone&&<a href={"tel:"+c.phone}><Phone size={15}/>{c.phone}</a>}{c.email&&<a href={"mailto:"+c.email}><Mail size={15}/>{c.email}</a>}{c.address&&<span><MapPin size={15}/>{c.address}</span>}</div><div className="contact-footer"><span>{jobs.filter(j=>j.contact_id===c.id).length} jobs / estimates</span><button onClick={()=>openModal("job",{contact_id:c.id,service:"Junk removal",stage:"new",source:"Phone"})}>New job <Plus size={15}/></button></div></div>)}{!filtered(contacts,"contacts").length&&<div className="grid-empty"><Empty icon={Users} title="No matching customers" subtitle="Add a customer to begin tracking their jobs."/></div>}</div></section>}
-     {tab==="tasks"&&<section className="panel list-panel"><div className="panel-top"><div><h2>Your follow-up list</h2><p>{openTasks.length} open reminders</p></div><button className="btn btn-outline" onClick={()=>openModal("task",{due_at:new Date().toISOString().slice(0,16)})}><Plus size={16}/> New follow-up</button></div><div className="task-section-label">TO DO</div>{openTasks.length?openTasks.map(taskRow):<Empty icon={CircleCheck} title="All caught up" subtitle="No pending follow-ups."/>}<div className="task-section-label">COMPLETED</div>{tasks.filter(t=>t.completed).length?tasks.filter(t=>t.completed).map(taskRow):<div className="muted-row">Finished tasks will appear here.</div>}</section>}
+     {tab==="customers"&&<section className="panel list-panel"><div className="panel-top"><div><h2>Completed customers</h2><p>{completedCustomers.length} customers with completed jobs</p></div><span className="customer-qualifier"><CircleCheck size={16}/> Completed jobs only</span></div>
+       <div className="table-tools"><div className="search-field"><Search size={17}/><input value={query} onChange={e=>setQuery(e.target.value)} placeholder="Find a completed customer by name, number or address…"/></div></div>
+       <div className="contact-grid">{filtered(completedCustomers,"contacts").map(c=><div className="contact-card" key={c.id}><div className="contact-top"><div className="avatar">{initials(c.name)}</div><button aria-label="Edit customer" className="icon-btn light" onClick={()=>openModal("contact",{...c})}><Pencil size={16}/></button></div><h3>{c.name}</h3>
+         <div className="contact-meta">{c.phone&&<a href={"tel:"+c.phone}><Phone size={15}/>{c.phone}</a>}{c.email&&<a href={"mailto:"+c.email}><Mail size={15}/>{c.email}</a>}{c.address&&<span><MapPin size={15}/>{c.address}</span>}</div>
+         <div className="contact-footer"><span>{jobs.filter(j=>j.contact_id===c.id&&j.stage==="completed").length} completed jobs</span><button onClick={()=>openModal("job",{contact_id:c.id,service:"Junk removal",stage:"booked",source:"Phone"})}>New job <Plus size={15}/></button></div>
+       </div>)}{!filtered(completedCustomers,"contacts").length&&<div className="grid-empty"><Empty icon={Users} title={query?"No matching customers":"No completed customers yet"} subtitle={query?"Try another search.":"Once a lead reaches Completed in the pipeline, their profile will appear here. Leads stay in the pipeline."}/></div>}</div>
+      </section>}
+     {tab==="tasks"&&<section className="panel list-panel">
+       <div className="panel-top"><div><h2>Follow-up center</h2><p>{openTasks.length} open reminders across your leads</p></div><button className="btn btn-outline" onClick={()=>openModal("task",{category:"follow_up",due_at:localDateTimeInput(Date.now()+DAY)})}><Plus size={16}/> New follow-up</button></div>
+       <div className="followup-tools"><div className="select-wrap"><Filter size={15}/><select aria-label="Filter follow-ups by category" value={taskCategoryFilter} onChange={e=>setTaskCategoryFilter(e.target.value)}><option value="all">All follow-up categories</option>{FOLLOW_UP_CATEGORIES.map(c=><option key={c.id} value={c.id}>{c.label}</option>)}</select></div><div className="followup-count">{filteredOpenTasks.length} pending</div></div>
+       <div className="task-section-label">TO DO</div>{filteredOpenTasks.length?filteredOpenTasks.map(taskRow):<Empty icon={CircleCheck} title="Nothing pending in this category" subtitle="Choose another category or create a follow-up from a lead."/>}
+       <div className="task-section-label">COMPLETED FOLLOW-UPS</div>{filteredDoneTasks.length?filteredDoneTasks.map(taskRow):<div className="muted-row">Completed follow-ups will appear here.</div>}
+      </section>}
      {tab==="calendar"&&<div className="content-stack"><section className="panel calendar-panel"><div className="panel-top"><div><h2>{month.toLocaleDateString("en-US",{month:"long",year:"numeric"})}</h2><p>Scheduled bookings from your Jamrock CRM</p></div><div className="calendar-actions"><button className="icon-btn outline" aria-label="Previous month" onClick={()=>setMonth(new Date(month.getFullYear(),month.getMonth()-1,1))}><ChevronLeft size={19}/></button><button className="btn btn-outline" onClick={()=>setMonth(new Date(new Date().getFullYear(),new Date().getMonth(),1))}>Today</button><button className="icon-btn outline" aria-label="Next month" onClick={()=>setMonth(new Date(month.getFullYear(),month.getMonth()+1,1))}><ChevronRight size={19}/></button></div></div><div className="calendar-grid">{["Sun","Mon","Tue","Wed","Thu","Fri","Sat"].map(d=><div key={d} className="weekday">{d}</div>)}{Array.from({length:Math.ceil((new Date(month.getFullYear(),month.getMonth(),1).getDay()+new Date(month.getFullYear(),month.getMonth()+1,0).getDate())/7)*7},(_,i)=>{const day=i-new Date(month.getFullYear(),month.getMonth(),1).getDay()+1;const cur=new Date(month.getFullYear(),month.getMonth(),day);const isCurrent=cur.getMonth()===month.getMonth();const isToday=cur.toDateString()===new Date().toDateString();const dayJobs=jobs.filter(j=>j.scheduled_at&&new Date(j.scheduled_at).toDateString()===cur.toDateString()&&j.stage!=="lost");return <div key={i} className={"cal-day "+(!isCurrent?"outside":"")+(isToday?" is-today":"")}><span className="date-num">{cur.getDate()}</span>{dayJobs.slice(0,3).map(j=><button key={j.id} title={j.service+" - "+(person(j.contact_id)?.name||"")} className="cal-event" onClick={()=>openModal("job",{...j,scheduled_at:j.scheduled_at?new Date(j.scheduled_at).toISOString().slice(0,16):""})}>{j.service}</button>)}{dayJobs.length>3&&<small>+{dayJobs.length-3} more</small>}</div>})}</div></section><div className="calendar-notice"><CalendarCheck2 size={20}/><div><b>Google Calendar is not connected yet</b><p>Scheduled jobs appear inside this CRM. Two-way Google Calendar syncing will require the client's Google authorization.</p></div><a href="https://calendar.google.com/" target="_blank" rel="noreferrer">Open Google Calendar <ExternalLink size={15}/></a></div></div>}
      {tab==="settings"&&<div className="settings-grid">
       <section className="panel settings-panel"><div className="panel-top"><div><h2>Business workspace</h2><p>Personalized for your crew</p></div></div><div className="setting-business"><img src={LOGO} alt="Jamrock logo"/><div><b>Jamrock Junk Removal, LLC</b><span>Gainesville, Florida</span><span>Custom workspace by Ignite Co.</span></div></div><div className="setting-detail"><span>Workspace</span><b>{workspace?.workspaces?.name||"Jamrock Command Center"}</b></div><div className="setting-detail"><span>Data storage</span><b>{connected?"Private Supabase database":"Browser-only preview"}</b></div>{connected&&<button className="btn btn-outline" onClick={async()=>{await db.auth.signOut();}}><LogOut size={16}/> Sign out</button>}</section>
