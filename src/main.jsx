@@ -98,6 +98,7 @@ const uuid = () => crypto.randomUUID();
 const hasStreetAddress = a => Boolean(a && a.trim().length>=12 && /\d/.test(a) && !/^ZIP\s+\d{5}(?:-\d{4})?$/i.test(a.trim()));
 const mapsUrl = a => "https://www.google.com/maps/search/?api=1&query="+encodeURIComponent(a);
 const propertySearchUrl = a => "https://www.zillow.com/homes/"+encodeURIComponent(a.trim().replace(/[,\s]+/g,"-"))+"_rb/";
+const redfinSearchUrl = a => "https://www.redfin.com/search?searchInput="+encodeURIComponent(a.trim());
 const stageInfo = (stage) => STAGES.find(s=>s.id===stage) || STAGES[0];
 const cssDate = (date) => date ? new Date(date).toLocaleDateString("en-CA") : "";
 function csvDownload(rows,filename){
@@ -138,9 +139,6 @@ function App(){
  const[month,setMonth]=useState(new Date(new Date().getFullYear(),new Date().getMonth(),1));
  const[selectedDay,setSelectedDay]=useState(null);
  const[propertyView,setPropertyView]=useState(null);
- const[propertyResult,setPropertyResult]=useState(null);
- const[propertyLoading,setPropertyLoading]=useState(false);
- const[propertyError,setPropertyError]=useState("");
  const[recordView,setRecordView]=useState("jobs");
  const[recordFilter,setRecordFilter]=useState("all");
  const[taskCategoryFilter,setTaskCategoryFilter]=useState("all");
@@ -181,23 +179,12 @@ function App(){
  };
  const draftAddress=j=>j?._addressEdited?(j.pickup_address||""):(j?.pickup_address||addressForJob(j));
  const selectedDayJobs=selectedDay?jobs.filter(j=>j.scheduled_at&&new Date(j.scheduled_at).toDateString()===selectedDay.toDateString()&&j.stage!=="lost").sort((a,b)=>new Date(a.scheduled_at)-new Date(b.scheduled_at)):[];
- async function viewHouse(j){
+ function viewHouse(j){
   const address=addressForJob(j);
-  if(!hasStreetAddress(address)){setToast("Save a complete street address first.");return;}
-  setPropertyView({jobId:j.id,address,customer:person(j.contact_id)?.name||"Customer"});
-  setPropertyResult(null);setPropertyError("");
-  if(!connected||!session){setPropertyError("Property provider isn't available in demo mode.");return;}
-  setPropertyLoading(true);
-  try{
-   const result=await db.functions.invoke("jamrock-property-details",{body:{job_id:j.id}});
-   if(result.error)throw Error(result.error.message||"Could not look up property.");
-   const data=result.data||{};
-   if(data.error)throw Error(data.error);
-   setPropertyResult(data);
-  }catch(e){setPropertyError(e.message||"Unable to load property records.");}
-  finally{setPropertyLoading(false);}
+  if(!hasStreetAddress(address)){setToast("Save the pickup street address first.");return;}
+  setPropertyView({address,customer:person(j.contact_id)?.name||"Customer"});
  }
- function closeProperty(){setPropertyView(null);setPropertyResult(null);setPropertyError("");}
+ function closeProperty(){setPropertyView(null);}
  const filtered=(items,kind)=>{
   const text=query.trim().toLowerCase();if(!text)return items;
   return items.filter(v=>(kind==="contacts"?[v.name,v.phone,v.email,v.address]:[v.service,v.notes,v.source,person(v.contact_id)?.name,person(v.contact_id)?.phone]).filter(Boolean).join(" ").toLowerCase().includes(text));
@@ -426,23 +413,22 @@ function App(){
     </div>
    </div>}
    {propertyView&&<div className="modal-overlay property-overlay" onMouseDown={e=>{if(e.target===e.currentTarget)closeProperty();}}>
-    <div className="modal property-panel" role="dialog" aria-modal="true" aria-label="Property details">
-     <div className="modal-top"><div><div className="eyebrow">JAMROCK PROPERTY LOOKUP</div><h2>View House</h2><p>{propertyView.address}</p></div><button className="icon-btn light" onClick={closeProperty} aria-label="Close property details"><X size={20}/></button></div>
-     <div className="property-content">
-      {propertyLoading&&<div className="property-loading"><RotateCcw size={22}/> Looking up public property records...</div>}
-      {!propertyLoading&&propertyResult?.property&&<div className="property-data">
-       <div className="property-provider"><ShieldCheck size={16}/><span>Property records provided by RentCast. These are not direct MLS records.</span></div>
-       <div className="property-stats">
-        <div><span>Estimated market value</span><b>{propertyResult.property.estimated_value!=null?money(propertyResult.property.estimated_value):"Not available"}</b><small>Model estimate, not appraisal</small></div>
-        <div><span>Last reported sale</span><b>{propertyResult.property.last_sale_price!=null?money(propertyResult.property.last_sale_price):"Not available"}</b><small>{propertyResult.property.last_sale_date?shortDate(propertyResult.property.last_sale_date):"Sale date unavailable"}</small></div>
-        <div><span>Assessed value</span><b>{propertyResult.property.assessed_value!=null?money(propertyResult.property.assessed_value):"Not available"}</b><small>Tax assessment, not market price</small></div>
-       </div>
-       <div className="property-features">{[["Type",propertyResult.property.property_type],["Year built",propertyResult.property.year_built],["Bedrooms",propertyResult.property.bedrooms],["Bathrooms",propertyResult.property.bathrooms],["Area (sq ft)",propertyResult.property.square_feet]].filter(([_,v])=>v!=null).map(([k,v])=><div key={k}><span>{k}</span><b>{v}</b></div>)}</div>
-       {propertyResult.property.estimate_low!=null&&propertyResult.property.estimate_high!=null&&<p className="property-estimate-range">Estimated value range: {money(propertyResult.property.estimate_low)} to {money(propertyResult.property.estimate_high)}</p>}
-       <p className="property-disclaimer">Records can be incomplete or delayed. Verify the property address and sale history before relying on this information. {propertyResult.as_of&&"Lookup: "+shortDate(propertyResult.as_of)+"."}</p>
-      </div>}
-      {!propertyLoading&&!propertyResult?.property&&<div className="property-unavailable"><div className="property-unavailable-icon"><House size={23}/></div><h3>{propertyResult?.setup_required?"Property data connection pending":propertyResult?.not_found?"No matching property found":"Property details unavailable"}</h3><p>{propertyResult?.message||propertyError||"You can still open public property records or a home listing search for this address."}</p></div>}
-      <div className="property-external"><a href={propertySearchUrl(propertyView.address)} target="_blank" rel="noopener noreferrer"><ExternalLink size={15}/> Search this house on Zillow</a><a href="https://www.acpafl.org/" target="_blank" rel="noopener noreferrer"><ExternalLink size={15}/> Alachua County property records</a><a href={mapsUrl(propertyView.address)} target="_blank" rel="noopener noreferrer"><MapPin size={15}/> Google Maps</a></div>
+    <div className="modal property-panel" role="dialog" aria-modal="true" aria-label="View house links">
+     <div className="modal-top"><div><div className="eyebrow">JAMROCK HOUSE VIEW</div><h2>View House</h2><p>Open property information or directions for the saved pickup address.</p></div><button className="icon-btn light" onClick={closeProperty} aria-label="Close house links"><X size={20}/></button></div>
+     <div className="house-links-content">
+      <div className="house-address-heading"><div className="house-address-icon"><MapPin size={21}/></div><div><span>PICKUP ADDRESS</span><strong>{propertyView.address}</strong></div></div>
+      <div className="house-destinations">
+       <a href={propertySearchUrl(propertyView.address)} target="_blank" rel="noopener noreferrer" className="house-destination">
+        <div className="house-destination-logo house-zillow">Z</div><div><b>Zillow</b><span>Home details, estimated value, sale history</span></div><ExternalLink size={18}/>
+       </a>
+       <a href={redfinSearchUrl(propertyView.address)} target="_blank" rel="noopener noreferrer" className="house-destination">
+        <div className="house-destination-logo house-redfin">R</div><div><b>Redfin</b><span>Property listings, price history, public records</span></div><ExternalLink size={18}/>
+       </a>
+       <a href={mapsUrl(propertyView.address)} target="_blank" rel="noopener noreferrer" className="house-destination">
+        <div className="house-destination-logo house-maps"><MapPin size={20}/></div><div><b>Google Maps</b><span>Map, satellite view, directions to the pickup</span></div><ExternalLink size={18}/>
+       </a>
+      </div>
+      <p className="house-links-note">Searches use the saved pickup address. Zillow and Redfin may ask you to select a matching property if a direct listing is unavailable.</p>
      </div>
     </div>
    </div>}
