@@ -43,7 +43,7 @@ const FOLLOW_UP_CATEGORIES = [
 ];
 const followCategory = id => FOLLOW_UP_CATEGORIES.find(c=>c.id===id)?.label||"Follow-up scheduled";
 const leadReceived = value => value ? new Intl.DateTimeFormat("en-US",{
-  timeZone:"America/New_York",weekday:"short",month:"short",day:"numeric",year:"numeric",
+  timeZone:"America/New_York",weekday:"long",month:"short",day:"numeric",year:"numeric",
   hour:"numeric",minute:"2-digit",timeZoneName:"short"
 }).format(new Date(value)) : "Unknown";
 const leadAge=(value,now)=>{
@@ -246,7 +246,7 @@ function App(){
   settings:["Workspace settings","Your business tools, integrations and information."]
  }[tab];
  function jobRow(j){
-  const c=person(j.contact_id);return <div className="job-row" key={j.id}><div className="avatar">{initials(c?.name)}</div><div className="job-main"><button className="link-title" onClick={()=>openModal("job",{...j,scheduled_at:j.scheduled_at?new Date(j.scheduled_at).toISOString().slice(0,16):""})}>{c?.name||"Customer"}</button><span>{j.service} <span className="mid-dot">·</span> {j.source||"Other"}</span></div><div className="job-money">{j.estimate_amount==null?"No estimate":money(j.estimate_amount)}</div><Pill stage={j.stage}/><button className="icon-btn light" title="Edit job" onClick={()=>openModal("job",{...j,scheduled_at:j.scheduled_at?new Date(j.scheduled_at).toISOString().slice(0,16):""})}><ArrowUpRight size={17}/></button></div>;
+  const c=person(j.contact_id);return <div className="job-row" key={j.id}><div className="avatar">{initials(c?.name)}</div><div className="job-main"><button className="link-title" onClick={()=>openModal("job",{...j,scheduled_at:j.scheduled_at?new Date(j.scheduled_at).toISOString().slice(0,16):""})}>{c?.name||"Customer"}</button><span>{j.service} <span className="mid-dot">·</span> {j.source||"Other"}</span><span>Received {leadReceived(j.created_at)} · {leadAge(j.created_at,now)}</span></div><div className="job-money">{j.estimate_amount==null?"No estimate":money(j.estimate_amount)}</div><Pill stage={j.stage}/><button className="icon-btn light" title="Edit job" onClick={()=>openModal("job",{...j,scheduled_at:j.scheduled_at?new Date(j.scheduled_at).toISOString().slice(0,16):""})}><ArrowUpRight size={17}/></button></div>;
  }
  function taskRow(t){
   const c=person(t.contact_id);
@@ -301,7 +301,7 @@ function App(){
        </div>
        <section className="panel"><div className="panel-top"><div><h2>Recent opportunities</h2><p>Your latest incoming jobs and estimates</p></div><button className="text-action" onClick={()=>changeTab("pipeline")}>Open pipeline <ArrowRight size={16}/></button></div><div className="jobs-list">{jobs.length?jobs.slice(0,5).map(jobRow):<Empty title="No leads yet" subtitle="Add your first lead to get started."/>}</div></section>
       </div>}
-     {tab==="pipeline"&&<div className="content-stack"><div className="section-utility"><div className="utility-note"><CircleDot size={16}/> Update lead stages as conversations move forward</div><button onClick={()=>openModal("lead",{source:"Phone"})} className="btn btn-outline"><Plus size={16}/> Add opportunity</button></div><div className="pipeline-board">{STAGES.filter(s=>s.id!=="lost").map(s=><div key={s.id} className="pipe-column"><div className="pipe-heading"><span className={"pipe-mark "+s.color}/><b>{s.label}</b><span>{jobs.filter(j=>j.stage===s.id).length}</span></div><div className="pipe-items">{jobs.filter(j=>j.stage===s.id).map(j=><div key={j.id} className="pipe-card"><div className="pipe-card-overline">{j.source||"Lead"}</div><button className="pipe-person" onClick={()=>openModal("job",{...j,scheduled_at:j.scheduled_at?new Date(j.scheduled_at).toISOString().slice(0,16):""})}>{person(j.contact_id)?.name||"Customer"} <ArrowUpRight size={15}/></button><span>{j.service}</span>{j.lead_details?.zip&&<span className="pipe-quote-meta">ZIP {j.lead_details.zip}{j.lead_details.timeline?" · "+j.lead_details.timeline:""}</span>}<div className="pipe-card-bottom"><b>{j.estimate_amount==null?"No quote":money(j.estimate_amount)}</b><select aria-label={"Change stage for "+j.service} value={j.stage} onChange={e=>setJobStage(j,e.target.value)}>{STAGES.map(st=><option key={st.id} value={st.id}>{st.label}</option>)}</select></div></div>)}{!jobs.some(j=>j.stage===s.id)&&<div className="pipe-empty">No opportunities</div>}</div></div>)}</div>{jobs.some(j=>j.stage==="lost")&&<div className="closed-note">Lost opportunities: {jobs.filter(j=>j.stage==="lost").length}. View and edit them in Jobs & estimates.</div>}</div>}
+     {tab==="pipeline"&&<div className="content-stack"><div className="section-utility"><div className="utility-note"><CircleDot size={16}/> Update lead stages as conversations move forward</div><button onClick={()=>openModal("lead",{source:"Phone"})} className="btn btn-outline"><Plus size={16}/> Add opportunity</button></div><div className="pipeline-board">{STAGES.filter(s=>s.id!=="lost").map(s=><div key={s.id} className="pipe-column"><div className="pipe-heading"><span className={"pipe-mark "+s.color}/><b>{s.label}</b><span>{jobs.filter(j=>j.stage===s.id).length}</span></div><div className="pipe-items">{jobs.filter(j=>j.stage===s.id).map(j=><div key={j.id} className="pipe-card"><div className="pipe-card-overline">{j.source||"Lead"}</div><div className="pipe-received" title={leadReceived(j.created_at)}><Clock size={12}/>{leadReceived(j.created_at)} <span>· {leadAge(j.created_at,now)}</span></div><button className="pipe-person" onClick={()=>openModal("job",{...j,scheduled_at:j.scheduled_at?new Date(j.scheduled_at).toISOString().slice(0,16):""})}>{person(j.contact_id)?.name||"Customer"} <ArrowUpRight size={15}/></button><span>{j.service}</span>{j.lead_details?.zip&&<span className="pipe-quote-meta">ZIP {j.lead_details.zip}{j.lead_details.timeline?" · "+j.lead_details.timeline:""}</span>}<button className="pipe-followup-action" title="Add this lead to follow-ups" onClick={()=>openFollowUpFromLead(j)}><ListTodo size={13}/> Add follow-up</button><div className="pipe-card-bottom"><b>{j.estimate_amount==null?"No quote":money(j.estimate_amount)}</b><select aria-label={"Change stage for "+j.service} value={j.stage} onChange={e=>setJobStage(j,e.target.value)}>{STAGES.map(st=><option key={st.id} value={st.id}>{st.label}</option>)}</select></div></div>)}{!jobs.some(j=>j.stage===s.id)&&<div className="pipe-empty">No opportunities</div>}</div></div>)}</div>{jobs.some(j=>j.stage==="lost")&&<div className="closed-note">Lost opportunities: {jobs.filter(j=>j.stage==="lost").length}. View and edit them in Jobs & estimates.</div>}</div>}
      {tab==="jobs"&&<div className="content-stack">
       <section className="panel list-panel">
        <div className="records-tabs" role="tablist" aria-label="Jobs and estimates">
@@ -358,6 +358,7 @@ function App(){
      <label>Notes<textarea rows={3} value={form.notes||""} onChange={e=>setForm({...form,notes:e.target.value})} placeholder="Anything the team should know"/></label>
     </>}
     {modal==="job"&&<>
+      {form.created_at&&<div className="lead-received-banner"><div><Clock size={18}/><div><b>Lead received</b><span>{leadReceived(form.created_at)}</span></div></div><strong>{leadAge(form.created_at,now)}</strong></div>}
       {form.lead_details&&Object.keys(form.lead_details).length>0&&<section className="intake-details">
        <div className="intake-heading"><div><b><ClipboardList size={17}/> Website quote request</b><span>Answers received directly from Jamrock's website</span></div><span className="intake-new">Website lead</span></div>
        <div className="intake-grid">
@@ -370,7 +371,7 @@ function App(){
        <div className="intake-source"><MapPin size={15}/><span>Source: {form.source||"Jamrock Website Quiz"}</span>{form.lead_details.page_url&&<a href={form.lead_details.page_url} target="_blank" rel="noopener noreferrer">View source page <ExternalLink size={14}/></a>}</div>
       </section>}
       {form.contact_id&&person(form.contact_id)&&<div className="intake-customer">
-       <div className="avatar">{initials(person(form.contact_id).name)}</div><div><b>{person(form.contact_id).name}</b><span>Customer contact</span></div>
+       <div className="avatar">{initials(person(form.contact_id).name)}</div><div><b>{person(form.contact_id).name}</b><span>{form.stage==="completed"?"Completed customer":"Lead contact"}</span></div>
        {person(form.contact_id).phone&&<a href={"tel:"+person(form.contact_id).phone} className="intake-contact-link"><Phone size={15}/> Call</a>}
        {person(form.contact_id).email&&<a href={"mailto:"+person(form.contact_id).email} className="intake-contact-link"><Mail size={15}/> Email</a>}
       </div>}
@@ -378,11 +379,18 @@ function App(){
       <div className="form-grid"><label>Stage<select value={form.stage||"new"} onChange={e=>setForm({...form,stage:e.target.value})}>{STAGES.map(s=><option key={s.id} value={s.id}>{s.label}</option>)}</select></label><label>Lead source<select value={form.source||"Phone"} onChange={e=>setForm({...form,source:e.target.value})}>{["Website","Google","Phone","Referral","Facebook","Other"].map(x=><option key={x}>{x}</option>)}</select></label></div>
       <div className="form-grid"><label>Estimate ($)<input min="0" step="0.01" type="number" value={form.estimate_amount??""} onChange={e=>setForm({...form,estimate_amount:e.target.value})} placeholder="0"/></label><label>Final job value ($)<input min="0" step="0.01" type="number" value={form.final_amount??""} onChange={e=>setForm({...form,final_amount:e.target.value})} placeholder="0"/></label></div>
       <label>Scheduled date and time<input type="datetime-local" value={form.scheduled_at||""} onChange={e=>setForm({...form,scheduled_at:e.target.value})}/></label>
-      <label>Job notes<textarea rows={3} value={form.notes||""} onChange={e=>setForm({...form,notes:e.target.value})} placeholder="Crew, access, materials, reminders"/></label>
+      <label>Latest contact note<textarea rows={3} value={form.notes||""} onChange={e=>setForm({...form,notes:e.target.value})} placeholder="Example: Called Tuesday at 2:25 PM. No answer, left voicemail."/></label>
+      {form.id&&<div className="lead-followup-cta"><div><b>Need to contact this lead again?</b><span>Add a categorized follow-up with the latest note. The lead remains in the pipeline.</span></div><button type="button" className="btn btn-outline" onClick={()=>openFollowUpFromLead(form)}><ListTodo size={17}/> Add to follow-ups <ArrowRight size={15}/></button></div>}
     </>}
     {modal==="task"&&<>
-      <label>What needs to happen? *<input autoFocus required value={form.title||""} onChange={e=>setForm({...form,title:e.target.value})} placeholder="Call customer about estimate"/></label>
-      <div className="form-grid"><label>Due date and time<input type="datetime-local" value={form.due_at||""} onChange={e=>setForm({...form,due_at:e.target.value})}/></label><label>Related customer<select value={form.contact_id||""} onChange={e=>setForm({...form,contact_id:e.target.value||null})}><option value="">No customer</option>{contacts.map(c=><option key={c.id} value={c.id}>{c.name}</option>)}</select></label></div>
+      <label>Follow-up action *<input autoFocus required value={form.title||""} onChange={e=>setForm({...form,title:e.target.value})} placeholder="Call customer about their estimate"/></label>
+      <div className="form-grid">
+       <label>Follow-up category *<select value={form.category||"follow_up"} onChange={e=>setForm({...form,category:e.target.value})}>{FOLLOW_UP_CATEGORIES.map(c=><option key={c.id} value={c.id}>{c.label}</option>)}</select></label>
+       <label>Due date and time *<input required type="datetime-local" value={form.due_at||""} onChange={e=>setForm({...form,due_at:e.target.value})}/></label>
+      </div>
+      <label>Related lead or customer<select value={form.contact_id||""} onChange={e=>setForm({...form,contact_id:e.target.value||null,job_id:e.target.value===form.contact_id?form.job_id:null})}><option value="">No related lead</option>{contacts.map(c=><option key={c.id} value={c.id}>{c.name}</option>)}</select></label>
+      <label>Latest contact note<textarea rows={4} value={form.notes||""} onChange={e=>setForm({...form,notes:e.target.value})} placeholder="What happened on the last call? What should we remember next time?"/></label>
+      {form.job_id&&<div className="task-job-related"><Link2 size={15}/> Linked to the corresponding lead in the pipeline</div>}
     </>}
     {error&&<p className="error-text">{error}</p>}
     <div className="modal-actions"><button type="button" className="btn btn-outline" onClick={()=>setModal(null)}>Cancel</button><button className="btn btn-primary" type="submit" disabled={saving}>{saving?"Saving…":"Save "+(modal==="lead"?"lead":modal==="job"?"job":modal==="task"?"follow-up":"customer")} <Check size={17}/></button></div>
