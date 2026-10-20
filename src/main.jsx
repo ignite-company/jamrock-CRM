@@ -179,6 +179,7 @@ function App(){
   const contact=person(j.contact_id);
   return hasStreetAddress(contact?.address||"")?contact.address.trim():"";
  };
+ const draftAddress=j=>j?._addressEdited?(j.pickup_address||""):(j?.pickup_address||addressForJob(j));
  const selectedDayJobs=selectedDay?jobs.filter(j=>j.scheduled_at&&new Date(j.scheduled_at).toDateString()===selectedDay.toDateString()&&j.stage!=="lost").sort((a,b)=>new Date(a.scheduled_at)-new Date(b.scheduled_at)):[];
  async function viewHouse(j){
   const address=addressForJob(j);
@@ -253,7 +254,7 @@ function App(){
    }
    if(modal==="contact")await upsert("contacts",{id:form.id,name:form.name.trim(),phone:form.phone||"",email:form.email||"",address:form.address||"",notes:form.notes||""},setContacts);
    if(modal==="job"){
-    const address=(form.pickup_address??addressForJob(form)).trim();
+    const address=draftAddress(form).trim();
     await upsert("jobs",{id:form.id,contact_id:form.contact_id,service:form.service||"Junk removal",source:form.source||"Other",pickup_address:address,stage:form.stage||"new",estimate_amount:form.estimate_amount===""||form.estimate_amount==null?null:Number(form.estimate_amount),final_amount:form.final_amount===""||form.final_amount==null?null:Number(form.final_amount),scheduled_at:form.scheduled_at?new Date(form.scheduled_at).toISOString():null,notes:form.notes||"",lead_details:form.lead_details||{},created_at:form.created_at||new Date().toISOString()},setJobs);
     // The contact record remembers the latest pickup address, but each job keeps its own address.
     const existing=person(form.contact_id);
@@ -474,16 +475,16 @@ function App(){
       <div className="form-grid"><label>Stage<select value={form.stage||"new"} onChange={e=>setForm({...form,stage:e.target.value})}>{STAGES.map(s=><option key={s.id} value={s.id}>{s.label}</option>)}</select></label><label>Lead source<select value={form.source||"Phone"} onChange={e=>setForm({...form,source:e.target.value})}>{["Website","Google","Phone","Referral","Facebook","Other"].map(x=><option key={x}>{x}</option>)}</select></label></div>
       <div className="form-grid"><label>Estimate ($)<input min="0" step="0.01" type="number" value={form.estimate_amount??""} onChange={e=>setForm({...form,estimate_amount:e.target.value})} placeholder="0"/></label><label>Final job value ($)<input min="0" step="0.01" type="number" value={form.final_amount??""} onChange={e=>setForm({...form,final_amount:e.target.value})} placeholder="0"/></label></div>
       <div className="pickup-address-block">
-       <label><span className="field-label-icon"><MapPin size={15}/> Pickup street address</span><input value={form.pickup_address??addressForJob(form)} onChange={e=>setForm({...form,pickup_address:e.target.value})} placeholder="123 Main St, Gainesville, FL 32601" autoComplete="street-address"/></label>
+       <label><span className="field-label-icon"><MapPin size={15}/> Pickup street address</span><input value={draftAddress(form)} onChange={e=>setForm({...form,pickup_address:e.target.value,_addressEdited:true})} placeholder="123 Main St, Gainesville, FL 32601" autoComplete="street-address"/></label>
        <div className="pickup-action-links">
-        {hasStreetAddress(form.pickup_address??addressForJob(form))?
-         <a href={mapsUrl(form.pickup_address??addressForJob(form))} target="_blank" rel="noopener noreferrer"><MapPin size={15}/> Open in Maps <ExternalLink size={13}/></a>:
+        {hasStreetAddress(draftAddress(form))?
+         <a href={mapsUrl(draftAddress(form))} target="_blank" rel="noopener noreferrer"><MapPin size={15}/> Open in Maps <ExternalLink size={13}/></a>:
          <small>Add street, city, state and ZIP before scheduling a pickup.</small>}
         {form.id&&hasStreetAddress(addressForJob(jobs.find(j=>j.id===form.id)))&&
-         (form.pickup_address===undefined||form.pickup_address===addressForJob(jobs.find(j=>j.id===form.id)))&&
+         (draftAddress(form)===addressForJob(jobs.find(j=>j.id===form.id)))&&
          <button type="button" onClick={()=>viewHouse(jobs.find(j=>j.id===form.id))}><ExternalLink size={15}/> View House <ArrowUpRight size={13}/></button>}
        </div>
-       {form.id&&form.pickup_address!==undefined&&form.pickup_address!==addressForJob(jobs.find(j=>j.id===form.id))&&<p className="pickup-save-hint">Save this address before using View House.</p>}
+       {form.id&&form._addressEdited&&draftAddress(form)!==addressForJob(jobs.find(j=>j.id===form.id))&&<p className="pickup-save-hint">Save this address before using View House.</p>}
       </div>
       <label>Scheduled date and time<input type="datetime-local" value={form.scheduled_at||""} onChange={e=>setForm({...form,scheduled_at:e.target.value})}/></label>
       <label>Latest contact note<textarea rows={3} value={form.notes||""} onChange={e=>setForm({...form,notes:e.target.value})} placeholder="Example: Called Tuesday at 2:25 PM. No answer, left voicemail."/></label>
