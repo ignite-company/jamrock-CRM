@@ -12,10 +12,10 @@ import {
 import "./styles.css";
 
 const LOGO = "https://assets.cdn.filesafe.space/bF1dT8IAVuvat84LkAVe/media/6ab1c9e4bdaa5e26a97f4bc3.png";
-const URL = import.meta.env.VITE_SUPABASE_URL;
+const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
 const KEY = import.meta.env.VITE_SUPABASE_ANON_KEY;
-const connected = Boolean(URL && KEY);
-const db = connected ? createClient(URL, KEY) : null;
+const connected = Boolean(SUPABASE_URL && KEY);
+const db = connected ? createClient(SUPABASE_URL, KEY) : null;
 const STAGES = [
   { id: "new", label: "New lead", color: "blue" },
   { id: "contacted", label: "Contacted", color: "gray" },
@@ -69,8 +69,8 @@ const cssDate = (date) => date ? new Date(date).toLocaleDateString("en-CA") : ""
 function csvDownload(rows,filename){
   const quote=v=>{const str=String(v??"");const guarded=/^[=+\-@\t\r]/.test(str)?"'"+str:str;return '"'+guarded.replace(/"/g,'""')+'"';};
   const csv=rows.map(row=>row.map(quote).join(",")).join("\r\n");
-  const url=URL.createObjectURL(new Blob([csv],{type:"text/csv;charset=utf-8"}));
-  const a=document.createElement("a");a.href=url;a.download=filename;a.click();URL.revokeObjectURL(url);
+  const url=window.URL.createObjectURL(new Blob([csv],{type:"text/csv;charset=utf-8"}));
+  const a=document.createElement("a");a.href=url;a.download=filename;a.click();window.URL.revokeObjectURL(url);
 }
 function Brand({ compact=false }){
  return <div className={"brand "+(compact?"brand-compact":"")}>
