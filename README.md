@@ -12,9 +12,9 @@ Custom, mobile-first CRM for **Jamrock Junk Removal, LLC** in Gainesville, Flori
 - CRM calendar for booked work
 - Follow-up checklist and reminder dates
 - Mobile-responsive layout
-- Private-user authentication and workspace-aware database schema, ready to enable with an isolated Supabase project
+- Private-user authentication and workspace-aware database schema connected to Jamrock's own Supabase project
 
-The demo is *not* a production CRM. Without Supabase environment variables the app runs with explicitly marked fake sample contacts stored only in the visitor's browser. Do not enter real customer details into demo mode.
+**Current status:** The browser app now uses Jamrock's dedicated Supabase project URL and public publishable key by default. This does **not** mean deployment or end-to-end database validation is complete. Do not enter real customer data before the authentication, permission, and persistence tests in step 6 are passed. The sample-record preview is available only if the app is explicitly built with the database configuration removed.
 
 ## Start development
 
@@ -25,11 +25,11 @@ npm run dev
 
 ## Production setup
 
-1. Create a **new, isolated Supabase project for Jamrock**. Do not reuse another client's or Ignite's operational database.
-2. Run [supabase/schema.sql](supabase/schema.sql) in the Supabase SQL editor. This creates workspace, contact, job and follow-up tables with row-level security.
+1. **Jamrock Supabase project exists:** `yvqduodposlpcimqqewc`. Keep it separate from other client databases.
+2. The owner reported successfully running [supabase/schema.sql](supabase/schema.sql) in Jamrock's SQL Editor. Verify the tables and security policies in Supabase before first real use. Do **not** run the SQL against a different or existing client project.
 3. In Supabase Authentication, disable public signups and provision the owner user. The user creation trigger automatically creates a private Jamrock workspace. For additional Jamrock staff, provision accounts and add their membership to the original workspace; do not use independent auto-created workspaces as shared production workspaces.
-4. Copy `.env.example` to `.env.local` and add the dedicated Supabase project URL and **publishable or anon key**. NEVER put a Supabase service-role key or secret key into any `VITE_` environment variable.
-5. Deploy this GitHub repository to a Vercel project with framework **Vite**, build command `npm run build`, output directory `dist`. Set the same `VITE_` values for Production.
+4. The app includes Jamrock's **public browser connection values**, so Vercel can build without additional environment configuration. If overriding them, set `VITE_SUPABASE_URL` to the base `.supabase.co` URL, never `/rest/v1/`, and `VITE_SUPABASE_ANON_KEY` to the publishable key. NEVER include database passwords, Supabase service-role keys or secret keys in client code or `VITE_` variables.
+5. Deploy `ignite-company/jamrock-CRM` to a **new Vercel project** called `jamrock-crm`: framework **Vite**, build command `npm run build`, output directory `dist`. Do not modify the existing `jamrock-junk-removal` Vercel website. As of Oct 20, Vercel's connected API rejected new-project creation with HTTP 403; the owner must create/import this new project in the Vercel UI if that restriction persists.
 6. Verify sign-in, create and edit lead, update job stage, schedule job, complete task, refresh persistence, and test a second unauthorized user. Only then enter real customer records.
 
 ## Integrations status
