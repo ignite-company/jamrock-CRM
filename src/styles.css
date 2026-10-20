@@ -215,3 +215,24 @@
 /* Property records open above an already-open lead editor. */
 .property-overlay{z-index:95}
 .day-schedule-overlay{z-index:80}
+
+/* View House: simple address-based links, no paid property data */
+.house-links-content{padding:23px 25px 26px}
+.house-address-heading{display:flex;align-items:center;gap:13px;background:#f3f8f2;border:1px solid #e1ebe0;padding:15px;border-radius:13px;margin-bottom:18px}
+.house-address-icon{display:grid;place-items:center;width:43px;height:43px;border-radius:12px;flex-shrink:0;background:#e4f2e5;color:#2c7a4a}
+.house-address-heading>div:last-child{display:flex;flex-direction:column;gap:5px;min-width:0}
+.house-address-heading span{font-size:9px;font-weight:850;letter-spacing:1.4px;color:#88a38d}
+.house-address-heading strong{font-size:14px;line-height:1.5;color:#1d4a30;overflow-wrap:anywhere}
+.house-destinations{display:flex;flex-direction:column;gap:11px}
+.house-destination{display:flex;align-items:center;gap:15px;padding:17px 16px;background:#fff;border:1px solid #e3ebe3;border-radius:12px;transition:border-color .16s,background .16s,transform .16s}
+.house-destination:hover{border-color:#b5d5be;background:#f8fcf8;transform:translateY(-1px)}
+.house-destination-logo{width:45px;height:45px;border-radius:12px;display:grid;place-items:center;font-size:24px;font-weight:850;flex-shrink:0}
+.house-zillow{background:#e7f0ff;color:#1265be}
+.house-redfin{background:#fff0ec;color:#d33f26}
+.house-maps{background:#e5f4e9;color:#299755}
+.house-destination>div:nth-child(2){display:flex;flex-direction:column;gap:5px;flex:1;min-width:0}
+.house-destination b{font-size:14px;color:#214a32}
+.house-destination span{font-size:11px;color:#94a695;line-height:1.5}
+.house-destination>svg:last-child{flex-shrink:0;color:#d87e21}
+.house-links-note{font-size:10px;line-height:1.65;color:#94a497;margin:16px 1px 0}
+@media(max-width:700px){.house-links-content{padding:18px 16px 20px}.house-destination{padding:13px 11px;gap:11px}.house-destination-logo{width:41px;height:41px;font-size:22px}.house-destination b{font-size:13px}.house-destination span{font-size:10px}}
