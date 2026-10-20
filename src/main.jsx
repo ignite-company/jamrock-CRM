@@ -2,7 +2,7 @@ import React, { useEffect, useMemo, useState } from "react";
 import { createRoot } from "react-dom/client";
 import { createClient } from "@supabase/supabase-js";
 import {
-  LayoutDashboard, Users, ClipboardList, Kanban, CalendarDays, Settings,
+  LayoutDashboard, Users, ClipboardList, Kanban, CalendarDays, Settings, House,
   Plus, Search, Bell, ArrowUpRight, Phone, Mail, MapPin, Check,
   ChevronLeft, ChevronRight, ChevronDown, Menu, X, Clock, Truck, DollarSign,
   CircleCheck, Star, ExternalLink, Download, ShieldCheck, LogOut, Link2,
@@ -408,10 +408,47 @@ function App(){
     </main>
    </div>
    {toast&&<div className="toast"><CircleCheck size={17}/>{toast}</div>}
+   {selectedDay&&<div className="modal-overlay day-schedule-overlay" onMouseDown={e=>{if(e.target===e.currentTarget)setSelectedDay(null);}}>
+    <div className="modal day-schedule-panel" role="dialog" aria-modal="true" aria-label={"Pickups for "+dayLabel(selectedDay)}>
+      <div className="modal-top"><div><div className="eyebrow">JAMROCK JOB SCHEDULE</div><h2>{dayLabel(selectedDay)}</h2><p>{selectedDayJobs.length} scheduled {selectedDayJobs.length===1?"pickup":"pickups"} for this day, ordered by time.</p></div><button className="icon-btn light" aria-label="Close day schedule" onClick={()=>setSelectedDay(null)}><X size={20}/></button></div>
+      <div className="day-schedule-list">{selectedDayJobs.length?selectedDayJobs.map(j=>{
+        const c=person(j.contact_id),addr=addressForJob(j);
+        return <div key={j.id} className="day-pickup">
+          <div className="day-pickup-time"><Clock size={15}/><strong>{new Date(j.scheduled_at).toLocaleTimeString("en-US",{hour:"numeric",minute:"2-digit"})}</strong></div>
+          <div className="day-pickup-info"><b>{c?.name||"Customer"}</b><span>{j.service}</span><div className="day-pickup-address"><MapPin size={16}/><span>{addr||"Pickup address not added yet"}</span></div>
+           <div className="day-pickup-links">{addr&&<a href={mapsUrl(addr)} target="_blank" rel="noopener noreferrer">Directions <ExternalLink size={13}/></a>}{c?.phone&&<a href={"tel:"+c.phone}>Call customer <Phone size={13}/></a>}<button onClick={()=>{setSelectedDay(null);editJob(j)}}>Open job <ArrowRight size={14}/></button></div>
+          </div>
+          <Pill stage={j.stage}/>
+         </div>;
+       }):<Empty icon={CalendarDays} title="No pickups scheduled" subtitle="There are no bookings on this day. Add a job and set its date and time to see it here."/>}</div>
+      <div className="day-schedule-foot"><button className="btn btn-outline" onClick={()=>setSelectedDay(null)}>Close schedule</button><button className="btn btn-primary" disabled={!contacts.length} onClick={()=>{const when=new Date(selectedDay);when.setHours(9,0,0,0);setSelectedDay(null);openModal("job",{contact_id:contacts[0]?.id||"",service:"Junk removal",stage:"booked",source:"Phone",scheduled_at:localDateTimeInput(when)});}}><Plus size={16}/> Schedule pickup</button></div>
+    </div>
+   </div>}
+   {propertyView&&<div className="modal-overlay property-overlay" onMouseDown={e=>{if(e.target===e.currentTarget)closeProperty();}}>
+    <div className="modal property-panel" role="dialog" aria-modal="true" aria-label="Property details">
+     <div className="modal-top"><div><div className="eyebrow">JAMROCK PROPERTY LOOKUP</div><h2>View House</h2><p>{propertyView.address}</p></div><button className="icon-btn light" onClick={closeProperty} aria-label="Close property details"><X size={20}/></button></div>
+     <div className="property-content">
+      {propertyLoading&&<div className="property-loading"><RotateCcw size={22}/> Looking up public property records...</div>}
+      {!propertyLoading&&propertyResult?.property&&<div className="property-data">
+       <div className="property-provider"><ShieldCheck size={16}/><span>Property records provided by RentCast. These are not direct MLS records.</span></div>
+       <div className="property-stats">
+        <div><span>Estimated market value</span><b>{propertyResult.property.estimated_value!=null?money(propertyResult.property.estimated_value):"Not available"}</b><small>Model estimate, not appraisal</small></div>
+        <div><span>Last reported sale</span><b>{propertyResult.property.last_sale_price!=null?money(propertyResult.property.last_sale_price):"Not available"}</b><small>{propertyResult.property.last_sale_date?shortDate(propertyResult.property.last_sale_date):"Sale date unavailable"}</small></div>
+        <div><span>Assessed value</span><b>{propertyResult.property.assessed_value!=null?money(propertyResult.property.assessed_value):"Not available"}</b><small>Tax assessment, not market price</small></div>
+       </div>
+       <div className="property-features">{[["Type",propertyResult.property.property_type],["Year built",propertyResult.property.year_built],["Bedrooms",propertyResult.property.bedrooms],["Bathrooms",propertyResult.property.bathrooms],["Area (sq ft)",propertyResult.property.square_feet]].filter(([_,v])=>v!=null).map(([k,v])=><div key={k}><span>{k}</span><b>{v}</b></div>)}</div>
+       {propertyResult.property.estimate_low!=null&&propertyResult.property.estimate_high!=null&&<p className="property-estimate-range">Estimated value range: {money(propertyResult.property.estimate_low)} to {money(propertyResult.property.estimate_high)}</p>}
+       <p className="property-disclaimer">Records can be incomplete or delayed. Verify the property address and sale history before relying on this information. {propertyResult.as_of&&"Lookup: "+shortDate(propertyResult.as_of)+"."}</p>
+      </div>}
+      {!propertyLoading&&!propertyResult?.property&&<div className="property-unavailable"><div className="property-unavailable-icon"><House size={23}/></div><h3>{propertyResult?.setup_required?"Property data connection pending":propertyResult?.not_found?"No matching property found":"Property details unavailable"}</h3><p>{propertyResult?.message||propertyError||"You can still open public property records or a home listing search for this address."}</p></div>}
+      <div className="property-external"><a href={propertySearchUrl(propertyView.address)} target="_blank" rel="noopener noreferrer"><ExternalLink size={15}/> Search this house on Zillow</a><a href="https://www.acpafl.org/" target="_blank" rel="noopener noreferrer"><ExternalLink size={15}/> Alachua County property records</a><a href={mapsUrl(propertyView.address)} target="_blank" rel="noopener noreferrer"><MapPin size={15}/> Google Maps</a></div>
+     </div>
+    </div>
+   </div>}
    {modal&&<div className="modal-overlay" onMouseDown={e=>{if(e.target===e.currentTarget&&!saving)setModal(null);}}><div role="dialog" aria-modal="true" aria-label={modal==="lead"?"New lead":"Edit record"} className="modal"><div className="modal-top"><div><div className="eyebrow">JAMROCK COMMAND CENTER</div><h2>{modal==="lead"?"Add a new lead":modal==="contact"?(form.id?"Edit customer":"Add customer"):modal==="job"?(form.id?"Edit job":"New job"):(form.id?"Edit follow-up":"New follow-up")}</h2><p>{modal==="lead"?"Capture the basics. You can fill in details later.":modal==="job"?"Keep job information accurate and easy to find.":modal==="task"?"A simple reminder so nothing falls through.":"Keep your customer records organized."}</p></div><button type="button" className="icon-btn light" onClick={()=>setModal(null)}><X size={20}/></button></div><form onSubmit={save} className="record-form">
     {(modal==="lead"||modal==="contact")&&<>
      <div className="form-grid"><label>Customer name *<input autoFocus required value={form.name||""} onChange={e=>setForm({...form,name:e.target.value})} placeholder="Full name"/></label><label>Phone number<input value={form.phone||""} onChange={e=>setForm({...form,phone:e.target.value})} placeholder="(352) 555-0123" type="tel"/></label></div>
-     <div className="form-grid"><label>Email<input type="email" value={form.email||""} onChange={e=>setForm({...form,email:e.target.value})} placeholder="customer@email.com"/></label><label>Address<input value={form.address||""} onChange={e=>setForm({...form,address:e.target.value})} placeholder="Street, city"/></label></div>
+     <div className="form-grid"><label>Email<input type="email" value={form.email||""} onChange={e=>setForm({...form,email:e.target.value})} placeholder="customer@email.com"/></label><label>Pickup address<input value={form.address||""} onChange={e=>setForm({...form,address:e.target.value})} placeholder="123 Main St, Gainesville, FL 32601"/></label></div>
      {modal==="lead"&&<div className="form-grid"><label>Service needed<input value={form.service||""} onChange={e=>setForm({...form,service:e.target.value})} placeholder="e.g. Garage cleanout"/></label><label>Lead source<select value={form.source||"Website"} onChange={e=>setForm({...form,source:e.target.value})}>{["Website","Google","Phone","Referral","Facebook","Other"].map(x=><option key={x}>{x}</option>)}</select></label></div>}
      <label>Notes<textarea rows={3} value={form.notes||""} onChange={e=>setForm({...form,notes:e.target.value})} placeholder="Anything the team should know"/></label>
     </>}
@@ -436,6 +473,18 @@ function App(){
       <div className="form-grid"><label>Customer *<select required value={form.contact_id||""} onChange={e=>setForm({...form,contact_id:e.target.value})}><option value="">Choose a customer</option>{contacts.map(c=><option key={c.id} value={c.id}>{c.name}</option>)}</select></label><label>Service *<input required value={form.service||""} onChange={e=>setForm({...form,service:e.target.value})} placeholder="e.g. Furniture removal"/></label></div>
       <div className="form-grid"><label>Stage<select value={form.stage||"new"} onChange={e=>setForm({...form,stage:e.target.value})}>{STAGES.map(s=><option key={s.id} value={s.id}>{s.label}</option>)}</select></label><label>Lead source<select value={form.source||"Phone"} onChange={e=>setForm({...form,source:e.target.value})}>{["Website","Google","Phone","Referral","Facebook","Other"].map(x=><option key={x}>{x}</option>)}</select></label></div>
       <div className="form-grid"><label>Estimate ($)<input min="0" step="0.01" type="number" value={form.estimate_amount??""} onChange={e=>setForm({...form,estimate_amount:e.target.value})} placeholder="0"/></label><label>Final job value ($)<input min="0" step="0.01" type="number" value={form.final_amount??""} onChange={e=>setForm({...form,final_amount:e.target.value})} placeholder="0"/></label></div>
+      <div className="pickup-address-block">
+       <label><span className="field-label-icon"><MapPin size={15}/> Pickup street address</span><input value={form.pickup_address??addressForJob(form)} onChange={e=>setForm({...form,pickup_address:e.target.value})} placeholder="123 Main St, Gainesville, FL 32601" autoComplete="street-address"/></label>
+       <div className="pickup-action-links">
+        {hasStreetAddress(form.pickup_address??addressForJob(form))?
+         <a href={mapsUrl(form.pickup_address??addressForJob(form))} target="_blank" rel="noopener noreferrer"><MapPin size={15}/> Open in Maps <ExternalLink size={13}/></a>:
+         <small>Add street, city, state and ZIP before scheduling a pickup.</small>}
+        {form.id&&hasStreetAddress(addressForJob(jobs.find(j=>j.id===form.id)))&&
+         (form.pickup_address===undefined||form.pickup_address===addressForJob(jobs.find(j=>j.id===form.id)))&&
+         <button type="button" onClick={()=>viewHouse(jobs.find(j=>j.id===form.id))}><ExternalLink size={15}/> View House <ArrowUpRight size={13}/></button>}
+       </div>
+       {form.id&&form.pickup_address!==undefined&&form.pickup_address!==addressForJob(jobs.find(j=>j.id===form.id))&&<p className="pickup-save-hint">Save this address before using View House.</p>}
+      </div>
       <label>Scheduled date and time<input type="datetime-local" value={form.scheduled_at||""} onChange={e=>setForm({...form,scheduled_at:e.target.value})}/></label>
       <label>Latest contact note<textarea rows={3} value={form.notes||""} onChange={e=>setForm({...form,notes:e.target.value})} placeholder="Example: Called Tuesday at 2:25 PM. No answer, left voicemail."/></label>
       {form.id&&<div className="lead-followup-cta"><div><b>Need to contact this lead again?</b><span>Add a categorized follow-up with the latest note. The lead remains in the pipeline.</span></div><button type="button" className="btn btn-outline" onClick={()=>openFollowUpFromLead(form)}><ListTodo size={17}/> Add to follow-ups <ArrowRight size={15}/></button></div>}
