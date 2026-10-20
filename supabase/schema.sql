@@ -38,6 +38,7 @@ create table if not exists public.jobs (
  contact_id uuid not null,
  service text not null default 'Junk removal',
  source text not null default 'Other',
+ pickup_address text not null default '',
  stage text not null default 'new' check(stage in ('new','contacted','estimate_sent','booked','completed','lost')),
  estimate_amount numeric(12,2) check(estimate_amount>=0),
  final_amount numeric(12,2) check(final_amount>=0),
@@ -69,6 +70,21 @@ create index if not exists tasks_workspace_due_idx on public.tasks(workspace_id,
 
 alter table public.workspaces enable row level security;
 alter table public.workspace_members enable row level security;
+-- Server-only property record cache; no direct browser table access.
+create table if not exists public.property_lookups (
+ id uuid primary key default gen_random_uuid(),
+ workspace_id uuid not null references public.workspaces(id) on delete cascade,
+ address_key text not null,
+ formatted_address text not null,
+ data jsonb not null default '{}'::jsonb,
+ provider text not null default 'RentCast',
+ retrieved_at timestamptz not null default now(),
+ unique(workspace_id,address_key)
+);
+create index if not exists property_lookups_workspace_idx on public.property_lookups(workspace_id);
+alter table public.property_lookups enable row level security;
+revoke all on table public.property_lookups from anon, authenticated;
+
 alter table public.contacts enable row level security;
 alter table public.jobs enable row level security;
 alter table public.tasks enable row level security;
