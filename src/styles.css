@@ -211,3 +211,7 @@
  .property-stats{gap:6px}.property-stats>div{padding:12px 8px}.property-stats b{font-size:15px}
  .property-features{grid-template-columns:repeat(2,minmax(0,1fr))}
 }
+
+/* Property records open above an already-open lead editor. */
+.property-overlay{z-index:95}
+.day-schedule-overlay{z-index:80}
