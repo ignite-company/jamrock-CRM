@@ -45,7 +45,16 @@ Deno.serve(async(req:Request)=>{
   const rentcastKey=Deno.env.get("RENTCAST_API_KEY");
   if(!rentcastKey)return respond({ok:false,setup_required:true,message:"Property data is not connected yet. An account-owned RentCast API key must be configured in Supabase."},200,origin);
   const headers={"X-Api-Key":rentcastKey,"Accept":"application/json"};
+  // Server-side rolling usage meter, keeping Jamrock under 40 API requests / 32 days.
+  // A failed/timeout request still reserves its slot conservatively.
+  async function reserve(operation:string):Promise<boolean> {
+    const {data,error}=await admin.rpc("reserve_jamrock_rentcast_request",{p_operation:operation});
+    if(error){console.error("Property quota reservation failed",error.code);throw Error("Quota checks are unavailable");}
+    return typeof data==="number" && data>=0;
+  }
   async function fromApi(path:string){
+   const allowed=await reserve(path==="properties"?"properties":"avm_value");
+   if(!allowed)return {budget_limited:true};
    const controller=new AbortController();
    const timer=setTimeout(()=>controller.abort(),9000);
    try{
@@ -58,13 +67,22 @@ Deno.serve(async(req:Request)=>{
   }
   // Property records contain sold history and assessment values. AVM is a distinct estimate, not MLS valuation.
   const recordResult=await fromApi("properties");
+  if((recordResult as any)?.budget_limited)return respond({ok:false,usage_limited:true,message:"Jamrock has reached its protected free property-data budget. Check back once old requests age out."},200,origin);
   if((recordResult as any)?.rate_limited)return respond({error:"Property data provider limit reached"},429,origin);
   if((recordResult as any)?.error)return respond({error:"Property data unavailable. Try public county records."},502,origin);
   const record=Array.isArray(recordResult)?recordResult.find((v:any)=>normalize(v.formattedAddress||"")===key)||recordResult[0]:recordResult;
   if(!record)return respond({ok:false,not_found:true,message:"This property wasn't found in the provider records."},200,origin);
   const valueResult=await fromApi("avm/value");
   const value=valueResult&&typeof valueResult==="object"&&!Array.isArray(valueResult)&&!(valueResult as any).error&&!(valueResult as any).rate_limited?valueResult as any:null;
-  const sale=(record as any).history?.[0]||{};
+  // Property histories and tax assessments are objects indexed by date / tax year.
+  // Do not treat them as arrays, or a real sale can appear missing in the CRM.
+  const sales=Object.values((record as any).history||{})
+    .filter((v:any)=>v&&typeof v==="object"&&v.event==="Sale")
+    .sort((a:any,b:any)=>String(b.date||"").localeCompare(String(a.date||"")));
+  const sale:any=sales[0]||{};
+  const assessments=Object.entries((record as any).taxAssessments||{})
+    .sort(([a],[b])=>b.localeCompare(a));
+  const assessment:any=assessments[0]?.[1]||{};
   const property={
     address:(record as any).formattedAddress||address,
     property_type:(record as any).propertyType||null,
@@ -75,10 +93,11 @@ Deno.serve(async(req:Request)=>{
     lot_size:(record as any).lotSize??null,
     last_sale_price:asNum((record as any).lastSalePrice??sale.price),
     last_sale_date:(record as any).lastSaleDate||sale.date||null,
-    assessed_value:asNum((record as any).assessedValue),
+    assessed_value:asNum(assessment.value),
     estimated_value:asNum(value?.price),
     estimate_low:asNum(value?.priceRangeLow),
-    estimate_high:asNum(value?.priceRangeHigh)
+    estimate_high:asNum(value?.priceRangeHigh),
+    estimate_skipped_due_to_limit:Boolean((valueResult as any)?.budget_limited)
   };
   const {error:cacheError}=await admin.from("property_lookups").upsert({
    workspace_id:membership.workspace_id,address_key:key,formatted_address:address,
