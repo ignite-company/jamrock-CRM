@@ -95,6 +95,9 @@ const fullDate = (n) => n ? new Date(n).toLocaleString("en-US",{month:"short",da
 const dayLabel = (date) => new Date(date).toLocaleDateString("en-US",{weekday:"long",month:"long",day:"numeric"});
 const initials = (name) => (name||"?").split(" ").slice(0,2).map(x=>x[0]||"").join("").toUpperCase();
 const uuid = () => crypto.randomUUID();
+const hasStreetAddress = a => Boolean(a && a.trim().length>=12 && /\d/.test(a) && !/^ZIP\s+\d{5}(?:-\d{4})?$/i.test(a.trim()));
+const mapsUrl = a => "https://www.google.com/maps/search/?api=1&query="+encodeURIComponent(a);
+const propertySearchUrl = a => "https://www.zillow.com/homes/"+encodeURIComponent(a.trim().replace(/[,\s]+/g,"-"))+"_rb/";
 const stageInfo = (stage) => STAGES.find(s=>s.id===stage) || STAGES[0];
 const cssDate = (date) => date ? new Date(date).toLocaleDateString("en-CA") : "";
 function csvDownload(rows,filename){
@@ -133,6 +136,11 @@ function App(){
  const[error,setError]=useState("");
  const[toast,setToast]=useState("");
  const[month,setMonth]=useState(new Date(new Date().getFullYear(),new Date().getMonth(),1));
+ const[selectedDay,setSelectedDay]=useState(null);
+ const[propertyView,setPropertyView]=useState(null);
+ const[propertyResult,setPropertyResult]=useState(null);
+ const[propertyLoading,setPropertyLoading]=useState(false);
+ const[propertyError,setPropertyError]=useState("");
  const[recordView,setRecordView]=useState("jobs");
  const[recordFilter,setRecordFilter]=useState("all");
  const[taskCategoryFilter,setTaskCategoryFilter]=useState("all");
@@ -164,6 +172,31 @@ function App(){
   }catch(e){setError(e.message||"Could not load business records.");}finally{setLoading(false);}
  }
  const person=(id)=>contacts.find(c=>c.id===id);
+ const addressForJob=j=>{
+  if(!j)return "";
+  const own=(j.pickup_address||"").trim();
+  if(hasStreetAddress(own))return own;
+  const contact=person(j.contact_id);
+  return hasStreetAddress(contact?.address||"")?contact.address.trim():"";
+ };
+ const selectedDayJobs=selectedDay?jobs.filter(j=>j.scheduled_at&&new Date(j.scheduled_at).toDateString()===selectedDay.toDateString()&&j.stage!=="lost").sort((a,b)=>new Date(a.scheduled_at)-new Date(b.scheduled_at)):[];
+ async function viewHouse(j){
+  const address=addressForJob(j);
+  if(!hasStreetAddress(address)){setToast("Save a complete street address first.");return;}
+  setPropertyView({jobId:j.id,address,customer:person(j.contact_id)?.name||"Customer"});
+  setPropertyResult(null);setPropertyError("");
+  if(!connected||!session){setPropertyError("Property provider isn't available in demo mode.");return;}
+  setPropertyLoading(true);
+  try{
+   const result=await db.functions.invoke("jamrock-property-details",{body:{job_id:j.id}});
+   if(result.error)throw Error(result.error.message||"Could not look up property.");
+   const data=result.data||{};
+   if(data.error)throw Error(data.error);
+   setPropertyResult(data);
+  }catch(e){setPropertyError(e.message||"Unable to load property records.");}
+  finally{setPropertyLoading(false);}
+ }
+ function closeProperty(){setPropertyView(null);setPropertyResult(null);setPropertyError("");}
  const filtered=(items,kind)=>{
   const text=query.trim().toLowerCase();if(!text)return items;
   return items.filter(v=>(kind==="contacts"?[v.name,v.phone,v.email,v.address]:[v.service,v.notes,v.source,person(v.contact_id)?.name,person(v.contact_id)?.phone]).filter(Boolean).join(" ").toLowerCase().includes(text));
@@ -188,7 +221,7 @@ function App(){
  const completedCustomerIds=new Set(jobs.filter(j=>j.stage==="completed").map(j=>j.contact_id));
  const completedCustomers=contacts.filter(c=>completedCustomerIds.has(c.id));
  const upcomingJobs=jobs.filter(j=>j.stage==="booked"&&j.scheduled_at).sort((a,b)=>new Date(a.scheduled_at)-new Date(b.scheduled_at));
- function changeTab(id){setTab(id);setMobileNav(false);setQuery("");}
+ function changeTab(id){setTab(id);setMobileNav(false);setQuery("");setSelectedDay(null);}
  function openModal(type,data={}){
   setError("");setForm(data);setModal(type);
  }
@@ -216,10 +249,18 @@ function App(){
   try{
    if(modal==="lead"){
     const c=await upsert("contacts",{name:form.name.trim(),phone:form.phone||"",email:form.email||"",address:form.address||"",notes:form.contact_notes||"",created_at:new Date().toISOString()},setContacts);
-    await upsert("jobs",{contact_id:c.id,service:form.service||"Junk removal",source:form.source||"Website",stage:"new",estimate_amount:null,final_amount:null,scheduled_at:null,notes:form.notes||"",created_at:new Date().toISOString()},setJobs);
+    await upsert("jobs",{contact_id:c.id,service:form.service||"Junk removal",source:form.source||"Website",pickup_address:hasStreetAddress(form.address)?form.address.trim():"",stage:"new",estimate_amount:null,final_amount:null,scheduled_at:null,notes:form.notes||"",created_at:new Date().toISOString()},setJobs);
    }
    if(modal==="contact")await upsert("contacts",{id:form.id,name:form.name.trim(),phone:form.phone||"",email:form.email||"",address:form.address||"",notes:form.notes||""},setContacts);
-   if(modal==="job")await upsert("jobs",{id:form.id,contact_id:form.contact_id,service:form.service||"Junk removal",source:form.source||"Other",stage:form.stage||"new",estimate_amount:form.estimate_amount===""||form.estimate_amount==null?null:Number(form.estimate_amount),final_amount:form.final_amount===""||form.final_amount==null?null:Number(form.final_amount),scheduled_at:form.scheduled_at?new Date(form.scheduled_at).toISOString():null,notes:form.notes||"",lead_details:form.lead_details||{},created_at:form.created_at||new Date().toISOString()},setJobs);
+   if(modal==="job"){
+    const address=(form.pickup_address??addressForJob(form)).trim();
+    await upsert("jobs",{id:form.id,contact_id:form.contact_id,service:form.service||"Junk removal",source:form.source||"Other",pickup_address:address,stage:form.stage||"new",estimate_amount:form.estimate_amount===""||form.estimate_amount==null?null:Number(form.estimate_amount),final_amount:form.final_amount===""||form.final_amount==null?null:Number(form.final_amount),scheduled_at:form.scheduled_at?new Date(form.scheduled_at).toISOString():null,notes:form.notes||"",lead_details:form.lead_details||{},created_at:form.created_at||new Date().toISOString()},setJobs);
+    // The contact record remembers the latest pickup address, but each job keeps its own address.
+    const existing=person(form.contact_id);
+    if(existing&&hasStreetAddress(address)&&existing.address!==address){
+      await upsert("contacts",{...existing,address},setContacts);
+    }
+   }
    if(modal==="task")await upsert("tasks",{id:form.id,title:form.title.trim(),category:form.category||"follow_up",notes:form.notes||"",contact_id:form.contact_id||null,job_id:form.job_id||null,due_at:form.due_at?new Date(form.due_at).toISOString():new Date().toISOString(),completed:Boolean(form.completed),created_at:form.created_at||new Date().toISOString()},setTasks);
    setModal(null);setToast("Saved successfully");if(connected)await reload();
   }catch(e){setError(e.message||"Could not save. Please try again.");}finally{setSaving(false);}
@@ -341,7 +382,24 @@ function App(){
        <div className="task-section-label">TO DO</div>{filteredOpenTasks.length?filteredOpenTasks.map(taskRow):<Empty icon={CircleCheck} title="Nothing pending in this category" subtitle="Choose another category or create a follow-up from a lead."/>}
        <div className="task-section-label">COMPLETED FOLLOW-UPS</div>{filteredDoneTasks.length?filteredDoneTasks.map(taskRow):<div className="muted-row">Completed follow-ups will appear here.</div>}
       </section>}
-     {tab==="calendar"&&<div className="content-stack"><section className="panel calendar-panel"><div className="panel-top"><div><h2>{month.toLocaleDateString("en-US",{month:"long",year:"numeric"})}</h2><p>Scheduled bookings from your Jamrock CRM</p></div><div className="calendar-actions"><button className="icon-btn outline" aria-label="Previous month" onClick={()=>setMonth(new Date(month.getFullYear(),month.getMonth()-1,1))}><ChevronLeft size={19}/></button><button className="btn btn-outline" onClick={()=>setMonth(new Date(new Date().getFullYear(),new Date().getMonth(),1))}>Today</button><button className="icon-btn outline" aria-label="Next month" onClick={()=>setMonth(new Date(month.getFullYear(),month.getMonth()+1,1))}><ChevronRight size={19}/></button></div></div><div className="calendar-grid">{["Sun","Mon","Tue","Wed","Thu","Fri","Sat"].map(d=><div key={d} className="weekday">{d}</div>)}{Array.from({length:Math.ceil((new Date(month.getFullYear(),month.getMonth(),1).getDay()+new Date(month.getFullYear(),month.getMonth()+1,0).getDate())/7)*7},(_,i)=>{const day=i-new Date(month.getFullYear(),month.getMonth(),1).getDay()+1;const cur=new Date(month.getFullYear(),month.getMonth(),day);const isCurrent=cur.getMonth()===month.getMonth();const isToday=cur.toDateString()===new Date().toDateString();const dayJobs=jobs.filter(j=>j.scheduled_at&&new Date(j.scheduled_at).toDateString()===cur.toDateString()&&j.stage!=="lost");return <div key={i} className={"cal-day "+(!isCurrent?"outside":"")+(isToday?" is-today":"")}><span className="date-num">{cur.getDate()}</span>{dayJobs.slice(0,3).map(j=><button key={j.id} title={j.service+" - "+(person(j.contact_id)?.name||"")} className="cal-event" onClick={()=>openModal("job",{...j,scheduled_at:j.scheduled_at?new Date(j.scheduled_at).toISOString().slice(0,16):""})}>{j.service}</button>)}{dayJobs.length>3&&<small>+{dayJobs.length-3} more</small>}</div>})}</div></section><div className="calendar-notice"><CalendarCheck2 size={20}/><div><b>Google Calendar is not connected yet</b><p>Scheduled jobs appear inside this CRM. Two-way Google Calendar syncing will require the client's Google authorization.</p></div><a href="https://calendar.google.com/" target="_blank" rel="noreferrer">Open Google Calendar <ExternalLink size={15}/></a></div></div>}
+     {tab==="calendar"&&<div className="content-stack">
+ <section className="panel calendar-panel">
+  <div className="panel-top"><div><h2>{month.toLocaleDateString("en-US",{month:"long",year:"numeric"})}</h2><p>Select any day to see every scheduled pickup and its address.</p></div><div className="calendar-actions"><button className="icon-btn outline" aria-label="Previous month" onClick={()=>setMonth(new Date(month.getFullYear(),month.getMonth()-1,1))}><ChevronLeft size={19}/></button><button className="btn btn-outline" onClick={()=>setMonth(new Date(new Date().getFullYear(),new Date().getMonth(),1))}>Today</button><button className="icon-btn outline" aria-label="Next month" onClick={()=>setMonth(new Date(month.getFullYear(),month.getMonth()+1,1))}><ChevronRight size={19}/></button></div></div>
+  <div className="calendar-grid">{["Sun","Mon","Tue","Wed","Thu","Fri","Sat"].map(d=><div key={d} className="weekday">{d}</div>)}{Array.from({length:Math.ceil((new Date(month.getFullYear(),month.getMonth(),1).getDay()+new Date(month.getFullYear(),month.getMonth()+1,0).getDate())/7)*7},(_,i)=>{
+   const day=i-new Date(month.getFullYear(),month.getMonth(),1).getDay()+1;
+   const cur=new Date(month.getFullYear(),month.getMonth(),day);
+   const isCurrent=cur.getMonth()===month.getMonth();
+   const isToday=cur.toDateString()===new Date().toDateString();
+   const dayJobs=jobs.filter(j=>j.scheduled_at&&new Date(j.scheduled_at).toDateString()===cur.toDateString()&&j.stage!=="lost");
+   return <button type="button" key={i} aria-label={dayLabel(cur)+"; "+dayJobs.length+" scheduled pickups"} className={"cal-day cal-selectable "+(!isCurrent?"outside":"")+(isToday?" is-today":"")} onClick={()=>setSelectedDay(cur)}>
+    <span className="date-num">{cur.getDate()}</span>
+    {dayJobs.slice(0,3).map(j=><span key={j.id} className="cal-event">{new Date(j.scheduled_at).toLocaleTimeString("en-US",{hour:"numeric",minute:"2-digit"})} · {person(j.contact_id)?.name||j.service}</span>)}
+    {dayJobs.length>3&&<small>+{dayJobs.length-3} more</small>}
+   </button>;
+  })}</div>
+ </section>
+ <div className="calendar-notice"><CalendarCheck2 size={20}/><div><b>Google Calendar is not connected yet</b><p>Scheduled jobs appear inside this CRM. Two-way Google Calendar syncing will require the client's Google authorization.</p></div><a href="https://calendar.google.com/" target="_blank" rel="noreferrer">Open Google Calendar <ExternalLink size={15}/></a></div>
+ </div>}
      {tab==="settings"&&<div className="settings-grid">
       <section className="panel settings-panel"><div className="panel-top"><div><h2>Business workspace</h2><p>Personalized for your crew</p></div></div><div className="setting-business"><img src={LOGO} alt="Jamrock logo"/><div><b>Jamrock Junk Removal, LLC</b><span>Gainesville, Florida</span><span>Custom workspace by Ignite Co.</span></div></div><div className="setting-detail"><span>Workspace</span><b>{workspace?.workspaces?.name||"Jamrock Command Center"}</b></div><div className="setting-detail"><span>Data storage</span><b>{connected?"Private Supabase database":"Browser-only preview"}</b></div>{connected&&<button className="btn btn-outline" onClick={async()=>{await db.auth.signOut();}}><LogOut size={16}/> Sign out</button>}</section>
       <section className="panel settings-panel"><div className="panel-top"><div><h2>Integrations</h2><p>Bring the platforms you already use together</p></div></div><div className="integration-row"><div className="integration-icon"><CalendarDays size={21}/></div><div><b>Google Calendar</b><span>Two-way sync not connected</span></div><a href="https://calendar.google.com/" target="_blank" rel="noreferrer">Open <ExternalLink size={15}/></a></div><div className="integration-row"><div className="integration-icon"><Star size={21}/></div><div><b>Google Business Profile</b><span>Reviews and profile API not connected</span></div><a href="https://business.google.com/" target="_blank" rel="noreferrer">Open <ExternalLink size={15}/></a></div><div className="integration-row"><div className="integration-icon"><Link2 size={21}/></div><div><b>Jamrock website forms</b><span>Automatic lead capture not connected</span></div><span className="soon">Planned</span></div></section>
