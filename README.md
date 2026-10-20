@@ -46,14 +46,11 @@ The code lives in GitHub and can be transferred to Jamrock's organization/accoun
 
 Logo is loaded from the image URL provided by Ignite. Color system: deep forest `#103A2B`, green `#2E884E`, orange `#E67816`, and off-white `#F7F9F7`.
 
-## Pickup addresses and property lookup
+## Pickup addresses and View House
 
-- Each CRM job has its own `pickup_address`; on save it can also update the contact's latest saved address. The calendar shows the address on every pickup.
-- Click any calendar day to see all pickups in time order and open directions, a customer call, or the job.
-- Saved full addresses produce a **View House** action in the job editor. It opens the property records panel, with a map and public property-search alternatives.
-- For actual in-app property records (sale history, tax assessments, assessed value, estimated market value), connect **RentCast** by adding `RENTCAST_API_KEY` in the **Jamrock Supabase project Edge Function secrets**. Do not expose this key in the browser or GitHub repository. RentCast's Developer plan includes 50 free API requests monthly, with overage billing beyond the included allowance.
-- `supabase/functions/jamrock-property-details/index.ts` is already deployed as the authenticated, server-side lookup endpoint. The endpoint caches selected non-owner property facts for 30 days so repeat lookups do not exhaust API quota.
-- **Free-usage protection (installed):** The server reserves a budget slot *before each RentCast request* and refuses to make more than **40 provider calls over any rolling 32-day window**, leaving 10 calls below the free plan's nominal 50. One new property lookup normally consumes two calls (record + valuation), while repeat cached lookups use none. This protects CRM-originated requests only; developer-playground calls or other apps using the same RentCast key are not counted, so monitor usage in RentCast itself.
-- **Configure privately:** In RentCast, activate the Developer plan and create a dedicated key. In Supabase (project `yvqduodposlpcimqqewc`), go to Edge Functions > Secrets, add `RENTCAST_API_KEY` with the key's value, and save. You do **not** need to commit the key or redeploy the Edge Function.
-- **Important:** RentCast's records and AVM estimates are **not a direct MLS feed**. MLS feeds generally require an authorized license and a separate provider agreement. Data may be unavailable for some addresses and delayed for recent sales.
-
+- Each job stores its own saved pickup street address. Calendar days show the time, customer, and pickup address for every scheduled job.
+- The **View House** button opens three optional external address-search links: **Zillow**, **Redfin**, and **Google Maps**. Links are generated from the saved full pickup address and open in a new tab.
+- Zillow and Redfin are third-party searches, not guaranteed direct property listings. If a specific property is not indexed, select a matching address in the destination website.
+- No MLS feed, paid data provider, or RentCast API is used by the View House feature.
+- The old `jamrock-property-details` Supabase function is replaced by a deactivated endpoint (HTTP 410), and cannot make RentCast requests.
+- If the old `RENTCAST_API_KEY` secret is still present in Supabase, it is no longer needed and may be deleted in **Edge Functions → Secrets**. Also review and cancel the RentCast subscription separately if one was activated.
