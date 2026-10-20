@@ -45,3 +45,13 @@ The code lives in GitHub and can be transferred to Jamrock's organization/accoun
 ## Design
 
 Logo is loaded from the image URL provided by Ignite. Color system: deep forest `#103A2B`, green `#2E884E`, orange `#E67816`, and off-white `#F7F9F7`.
+
+## Pickup addresses and property lookup
+
+- Each CRM job has its own `pickup_address`; on save it can also update the contact's latest saved address. The calendar shows the address on every pickup.
+- Click any calendar day to see all pickups in time order and open directions, a customer call, or the job.
+- Saved full addresses produce a **View House** action in the job editor. It opens the property records panel, with a map and public property-search alternatives.
+- For actual in-app property records (sale history, tax assessments, assessed value, estimated market value), connect **RentCast** by adding `RENTCAST_API_KEY` in the **Jamrock Supabase project Edge Function secrets**. Do not expose this key in the browser or GitHub repository. RentCast offers limited free API usage and charges for higher usage.
+- `supabase/functions/jamrock-property-details/index.ts` is already deployed as the authenticated, server-side lookup endpoint. The endpoint caches selected non-owner property facts for 30 days so repeat lookups do not exhaust API quota.
+- **Important:** RentCast's records and AVM estimates are **not a direct MLS feed**. MLS feeds generally require an authorized license and a separate provider agreement. Data may be unavailable for some addresses and delayed for recent sales.
+
