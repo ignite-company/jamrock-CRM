@@ -77,3 +77,26 @@
  .record-footer-note{font-size:10px;align-items:flex-start;line-height:1.5}
  .record-footer-note svg{flex-shrink:0}
 }
+
+/* Jamrock inbound website quote details */
+.pipe-quote-meta{font-size:10px!important;color:#d17c23!important;white-space:normal}
+.intake-details{border:1px solid #dceadf;background:linear-gradient(160deg,#f1f8f1,#fff);border-radius:13px;padding:19px 18px;margin-bottom:4px}
+.intake-heading{display:flex;align-items:flex-start;gap:12px;justify-content:space-between;margin-bottom:17px}
+.intake-heading>div{display:flex;flex-direction:column;gap:6px}
+.intake-heading b{display:flex;align-items:center;gap:9px;color:#214e34;font-size:13px}
+.intake-heading b svg{color:#d97620}
+.intake-heading span{color:#8ba28f;font-size:10px;line-height:1.5}
+.intake-heading .intake-new{padding:7px 10px;border-radius:18px;background:#e6f3e8;color:#347b4b;font-weight:780;white-space:nowrap}
+.intake-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:11px}
+.intake-grid>div{display:flex;flex-direction:column;gap:5px;padding:12px;background:white;border:1px solid #e4ede5;border-radius:9px}
+.intake-grid span{color:#96ab9a;font-size:10px}
+.intake-grid strong{color:#2a5239;font-size:12px;line-height:1.45;overflow-wrap:anywhere}
+.intake-source{display:flex;align-items:center;gap:9px;margin-top:14px;padding-top:13px;border-top:1px solid #dfebdf;color:#738d78;font-size:10px}
+.intake-source>a{margin-left:auto;color:#cc761f;font-weight:770;display:inline-flex;align-items:center;gap:5px}
+.intake-customer{border:1px solid #e6ece5;border-radius:12px;padding:13px;display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+.intake-customer>div:nth-child(2){flex:1;display:flex;flex-direction:column;gap:4px;min-width:130px}
+.intake-customer b{font-size:12px;color:#28543b}
+.intake-customer span{font-size:10px;color:#94a995}
+.intake-contact-link{display:inline-flex;align-items:center;gap:6px;background:#f0f6f0;border-radius:8px;padding:8px 11px;color:#3a7750;font-size:11px;font-weight:750}
+.intake-contact-link:hover{background:#e2eee3}
+@media(max-width:700px){.intake-details{padding:14px}.intake-grid{gap:7px}.intake-grid>div{padding:10px}.intake-source{flex-wrap:wrap}.intake-source>a{margin-left:0}.intake-heading{align-items:flex-start}.intake-heading .intake-new{font-size:9px;padding:6px 7px}.intake-customer{gap:9px}}
