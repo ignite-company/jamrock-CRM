@@ -18,3 +18,62 @@
 .toast{position:fixed;right:24px;bottom:24px;z-index:99;background:#173d2c;color:white;display:flex;align-items:center;gap:10px;padding:13px 17px;border-radius:10px;box-shadow:0 15px 40px #163a2750;font-size:12px;font-weight:700}.toast svg{color:#9fdcb1}
 .modal-overlay{position:fixed;inset:0;z-index:60;background:#0b271ca3;display:flex;align-items:center;justify-content:center;padding:16px}.modal{background:white;border-radius:18px;width:min(610px,100%);max-height:min(90vh,820px);overflow-y:auto;box-shadow:0 28px 100px #09231855}.modal-top{display:flex;justify-content:space-between;align-items:flex-start;padding:27px 29px 21px;border-bottom:1px solid #edf1ed}.modal-top .eyebrow{font-size:9px;margin-bottom:9px}.modal-top h2{font-size:22px;letter-spacing:-.6px;color:#1c422e;margin:0 0 6px}.modal-top p{font-size:11px;color:#9eac9e;line-height:1.5;margin:0}.record-form{padding:23px 29px 27px;display:flex;flex-direction:column;gap:17px}.record-form label,.form-stack label{font-weight:750;font-size:11px;color:#46644d;display:flex;flex-direction:column;gap:8px;min-width:0}.record-form input,.record-form select,.record-form textarea,.form-stack input{border:1px solid #dce7dc;border-radius:9px;padding:11px 12px;background:#fff;color:#254a33;font-size:12px;outline:0;min-height:42px;width:100%;min-width:0}.record-form textarea{resize:vertical;line-height:1.5}.record-form input:focus,.record-form select:focus,.record-form textarea:focus,.form-stack input:focus{border-color:#eca15e;box-shadow:0 0 0 3px #f9e7d6}.record-form input::placeholder,.record-form textarea::placeholder{color:#a9b8aa}.form-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:15px}.modal-actions{display:flex;justify-content:flex-end;gap:9px;margin-top:8px;padding-top:18px;border-top:1px solid #edf1ed}.error-text{font-size:12px;color:#ad3838;margin:0}.login-bg{min-height:100vh;background:linear-gradient(145deg,#0b3021,#205a3d);display:grid;place-items:center;padding:24px}.login-card{width:min(440px,100%);background:white;border-radius:22px;padding:35px;box-shadow:0 30px 80px #001f1457}.login-card .brand-copy b{color:#1b492f}.login-card .brand-copy span{color:#688c6f}.login-hero{margin:27px 0}.login-hero svg{color:#e67816;margin-bottom:11px}.login-hero h1{font-size:27px;letter-spacing:-.7px;margin-bottom:8px;color:#173e2b}.login-hero p{font-size:12px;color:#8aa18e;line-height:1.7}.form-stack{display:flex;flex-direction:column;gap:16px}.form-stack .btn{width:100%;margin-top:7px}.login-footnote{font-size:10px;line-height:1.7;color:#9fb0a1;text-align:center;margin:22px 0 0}.loading-page{display:grid;place-items:center;min-height:100vh;color:#52775e;font-size:14px;font-weight:750;background:#f7f9f7}
 @media(max-width:1280px){.page{padding:30px 25px 65px}.metric-card{padding:18px}.contact-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.pipeline-board{grid-template-columns:repeat(5,215px)}}@media(max-width:1020px){.sidebar{width:220px}.main-shell{margin-left:220px;width:calc(100% - 220px)}.page{padding:25px 20px 55px}.metric-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.dash-grid,.settings-grid{grid-template-columns:1fr}.metric-card{min-height:139px}.topbar{padding:0 23px}}@media(max-width:700px){.sidebar{width:263px;transform:translateX(-101%);transition:transform .2s;box-shadow:8px 0 28px #00190b26}.sidebar.sidebar-open{transform:translateX(0)}.nav-scrim{position:fixed;inset:0;background:#081e14a6;z-index:25}.main-shell{margin:0;width:100%}.topbar{height:63px;padding:0 17px}.mobile-menu,.mobile-close{display:inline-flex!important}.mobile-menu{margin-right:5px;color:#2d6040}.side-header{justify-content:space-between}.mobile-close{color:white}.page{padding:23px 16px 60px}.page-heading{align-items:flex-start;gap:13px;margin-bottom:23px}.page-heading h1{font-size:25px;letter-spacing:-.85px}.page-heading p{font-size:11px}.eyebrow{font-size:9px}.heading-actions{padding-top:9px}.heading-actions .btn-outline{display:none}.heading-actions .btn{height:38px;padding:0 11px;font-size:11px}.metric-grid{gap:10px}.metric-card{min-height:133px;padding:15px}.metric-top{margin-bottom:12px}.metric-top span{font-size:10px}.metric-icon{height:29px;width:29px}.metric-icon svg{height:16px}.metric-card strong{font-size:28px}.metric-card small{font-size:9px}.panel-top{padding:18px 17px 15px}.job-row{gap:9px;padding:12px 14px;flex-wrap:wrap}.job-row>.avatar{width:35px;height:35px}.job-main{flex-basis:38%}.job-money{font-size:11px}.job-row>.pill{order:6;margin-left:44px}.job-row>.icon-btn{margin-left:auto}.task-row,.schedule-row{padding:14px 17px}.table-tools{padding:0 16px 16px}.contact-grid{padding:0 16px 16px;grid-template-columns:1fr}.calendar-panel .panel-top{align-items:flex-start}.calendar-actions{gap:4px}.calendar-actions .btn{padding:0 8px}.cal-day{min-height:74px;padding:5px 3px}.date-num{font-size:10px;margin-bottom:4px}.weekday{font-size:9px}.cal-event{font-size:8px;padding:4px 3px}.calendar-notice{align-items:flex-start;flex-wrap:wrap}.calendar-notice a{margin-left:34px}.demo-banner{align-items:flex-start;padding:12px}.demo-banner>div span{font-size:10px}.demo-banner button{display:none}.section-utility{align-items:flex-start}.utility-note{max-width:50%;font-size:10px}.form-grid{grid-template-columns:1fr;gap:17px}.modal-top{padding:20px 21px}.record-form{padding:22px 21px}.today-date{display:none}}@media(max-width:380px){.page-heading h1{font-size:22px}.heading-actions .btn{font-size:10px;padding:0 8px}.metric-card strong{font-size:24px}.pipe-column{min-width:210px}}
+
+
+/* Separate business records from the lead-sales pipeline */
+.records-tabs{display:flex;align-items:center;gap:25px;border-bottom:1px solid #e9eee8;padding:0 22px}
+.records-tabs button{display:inline-flex;align-items:center;gap:9px;background:none;border:0;border-bottom:3px solid transparent;padding:20px 6px 16px;color:#7b9080;font-size:13px;font-weight:760;transition:color .15s,border-color .15s}
+.records-tabs button:hover{color:#205a38}.records-tabs button.active{color:#174c32;border-bottom-color:#e67816}
+.records-tabs button.active svg{color:#e67816}
+.records-tabs button span{font-size:11px;font-weight:800;background:#edf2ed;color:#68836f;border-radius:7px;padding:3px 8px}
+.records-tabs button.active span{background:#eaf3eb;color:#367447}
+.records-heading{padding-top:25px}
+.record-highlights{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;padding:0 23px 22px}
+.record-highlights>div{background:#f8faf8;border:1px solid #edf1ed;border-radius:11px;padding:16px 17px;min-width:0;display:flex;flex-direction:column;gap:10px}
+.record-highlights span{display:flex;align-items:center;gap:8px;color:#778d7c;font-size:11px;font-weight:680}
+.record-highlights span svg{color:#579067}
+.record-highlights strong{color:#214a32;font-size:24px;letter-spacing:-.8px;font-weight:800}
+.records-tools{padding-bottom:17px}
+.work-record{display:flex;align-items:center;gap:15px;padding:17px 23px;border-top:1px solid #eef2ee;min-height:87px}
+.work-record-icon{height:41px;width:41px;border-radius:11px;display:grid;place-items:center;flex-shrink:0}
+.work-record-icon.job-icon{background:#e6f5e9;color:#389052}.work-record-icon.quote-icon{background:#fff1e5;color:#d47719}
+.work-record-detail{display:flex;flex-direction:column;gap:6px;flex:1;min-width:0}
+.work-record-name{background:none;border:0;padding:0;color:#244b34;font-size:13px;font-weight:780;text-align:left;line-height:1.4}
+.work-record-name:hover{color:#d87920}
+.work-record-detail span{font-size:10px;color:#91a294;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.work-record-amount{width:125px;flex-shrink:0;display:flex;flex-direction:column;gap:6px}
+.work-record-amount span{font-size:10px;color:#94a797}
+.work-record-amount strong{font-size:13px;font-weight:820;color:#27523a}
+.work-record-progress{width:157px;flex-shrink:0;display:flex;flex-direction:column;gap:5px;align-items:flex-start}
+.work-label{font-size:10px;font-weight:770;border-radius:20px;padding:6px 10px}
+.work-label-estimate{background:#fff1e3;color:#bb701f}.work-label-booked{background:#eaf4eb;color:#3d8753}.work-label-complete{background:#dff2e4;color:#247b44}
+.work-record-progress small{font-size:10px;color:#97a899}
+.work-record-actions{width:118px;display:flex;align-items:center;justify-content:flex-end;gap:5px;flex-shrink:0}
+.work-quick{border:0;background:#fff5e9;border-radius:8px;padding:8px;color:#c36e1c;display:inline-flex;align-items:center;gap:5px;font-size:10px;font-weight:780;white-space:nowrap}
+.work-quick:hover{background:#fee8d2}
+.records-hint{border-top:1px solid #edf1ed;padding:16px 23px;display:flex;align-items:center;gap:9px;color:#76927b;font-size:11px;flex-wrap:wrap}
+.records-hint svg{color:#69a678}.records-hint button{display:inline-flex;align-items:center;gap:4px;border:0;background:none;color:#d97717;font-weight:770;padding:0}
+.record-footer-note{display:flex;align-items:center;gap:9px;color:#7f9c85;font-size:11px;margin:-7px 4px 0}
+.record-footer-note svg{color:#e67816}
+@media(max-width:1050px){.work-record{gap:10px}.work-record-amount{width:90px}.work-record-progress{width:118px}.work-record-actions{width:95px}.record-highlights{gap:9px}}
+@media(max-width:700px){
+ .records-tabs{padding:0 15px;gap:24px}.records-tabs button{font-size:12px;padding:17px 3px 13px}
+ .records-heading{padding:19px 15px 18px}.records-heading .btn{padding:0 11px;font-size:11px}
+ .record-highlights{padding:0 15px 17px;gap:7px}
+ .record-highlights>div{padding:12px 9px;border-radius:9px;gap:9px}
+ .record-highlights span{font-size:9px;line-height:1.35;gap:5px}.record-highlights span svg{width:13px;height:13px;flex-shrink:0}
+ .record-highlights strong{font-size:21px}
+ .records-tools{padding:0 15px 16px}
+ .work-record{position:relative;display:grid;grid-template-columns:38px minmax(0,1fr) auto;column-gap:10px;row-gap:10px;padding:15px}
+ .work-record-icon{height:38px;width:38px}
+ .work-record-detail{grid-column:2;grid-row:1}
+ .work-record-amount{grid-column:2;grid-row:2;width:auto}
+ .work-record-progress{grid-column:3;grid-row:1;align-items:flex-end;width:auto;text-align:right}
+ .work-record-actions{grid-column:3;grid-row:2;width:auto}
+ .work-record-detail span{max-width:250px}
+ .work-label{font-size:9px}
+ .work-record-progress small{font-size:9px}
+ .work-record-name{font-size:12px}
+ .record-footer-note{font-size:10px;align-items:flex-start;line-height:1.5}
+ .record-footer-note svg{flex-shrink:0}
+}
