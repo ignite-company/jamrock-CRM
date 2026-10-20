@@ -100,3 +100,52 @@
 .intake-contact-link{display:inline-flex;align-items:center;gap:6px;background:#f0f6f0;border-radius:8px;padding:8px 11px;color:#3a7750;font-size:11px;font-weight:750}
 .intake-contact-link:hover{background:#e2eee3}
 @media(max-width:700px){.intake-details{padding:14px}.intake-grid{gap:7px}.intake-grid>div{padding:10px}.intake-source{flex-wrap:wrap}.intake-source>a{margin-left:0}.intake-heading{align-items:flex-start}.intake-heading .intake-new{font-size:9px;padding:6px 7px}.intake-customer{gap:9px}}
+
+
+/* Lead routing, response age, and contextual follow-up management */
+.customer-qualifier{display:inline-flex;align-items:center;gap:7px;border-radius:20px;background:#e7f3e9;color:#32794c;padding:9px 12px;font-size:11px;font-weight:760;white-space:nowrap}
+.pipe-received{display:flex;align-items:flex-start;flex-wrap:wrap;gap:5px;color:#809785;font-size:10px;line-height:1.55;margin:0 0 2px}
+.pipe-received svg{flex-shrink:0;margin-top:2px;color:#dc7d23}
+.pipe-received span{color:#bd761d;font-weight:750}
+.pipe-followup-action{display:inline-flex;align-items:center;gap:6px;align-self:start;background:#f6fbf5;color:#3b8052;border:1px solid #dbeadb;border-radius:7px;padding:7px 9px;font-size:10px;font-weight:750}
+.pipe-followup-action:hover{border-color:#8abc98;background:#ecf7ec}
+.lead-received-banner{background:#f2f7f1;border:1px solid #dfebdd;padding:13px 14px;border-radius:11px;display:flex;align-items:center;justify-content:space-between;gap:13px}
+.lead-received-banner>div{display:flex;align-items:center;gap:11px;min-width:0}
+.lead-received-banner svg{flex-shrink:0;color:#e6791a}
+.lead-received-banner>div>div{display:flex;flex-direction:column;gap:4px;min-width:0}
+.lead-received-banner b{color:#2e6240;font-size:12px}
+.lead-received-banner span{color:#7b9680;font-size:11px;line-height:1.5}
+.lead-received-banner>strong{color:#c9721b;background:#fff4e8;border-radius:16px;padding:6px 9px;white-space:nowrap;font-size:10px;font-weight:800}
+.lead-followup-cta{background:#fffaf3;border:1px solid #f2e1c9;border-radius:11px;padding:16px;display:flex;align-items:center;gap:16px;justify-content:space-between}
+.lead-followup-cta>div{display:flex;flex-direction:column;gap:5px;min-width:0}
+.lead-followup-cta b{font-size:12px;color:#3d5c3e}
+.lead-followup-cta span{font-size:11px;line-height:1.55;color:#969e87}
+.lead-followup-cta .btn{flex-shrink:0;background:white}
+.categorized-task{align-items:flex-start}
+.categorized-task .task-check{margin-top:5px}
+.categorized-task>.icon-btn{margin-top:1px}
+.task-header{display:flex;align-items:center;gap:9px;flex-wrap:wrap}
+.task-header>b{flex:0 1 auto}
+.followup-tag{display:inline-flex;align-items:center;background:#eaf4ec;border-radius:20px;padding:5px 8px;color:#3c8351;white-space:normal;line-height:1.2;font-weight:800;font-size:9px}
+.followup-no_answer{color:#bd7018;background:#fff1de}
+.followup-unresponsive{color:#ac4c43;background:#fdf0ed}
+.followup-waiting_on_customer{color:#5074a0;background:#ecf2fa}
+.task-latest-note{margin:1px 0 0;color:#67836e;font-size:11px;line-height:1.6;white-space:pre-wrap;overflow-wrap:anywhere}
+.task-latest-note strong{color:#476b4f}
+.task-related-link{background:none;border:0;padding:2px 0;display:inline-flex;align-items:center;gap:4px;color:#d27b24;font-size:10px;font-weight:750;align-self:flex-start}
+.task-related-link:hover{text-decoration:underline}
+.followup-tools{padding:2px 23px 17px;display:flex;justify-content:space-between;align-items:center;gap:9px}
+.followup-tools .select-wrap{min-width:215px;background:#fcfdfb}
+.followup-count{font-size:11px;font-weight:800;color:#779081}
+.task-job-related{display:flex;align-items:center;gap:8px;color:#649271;font-size:11px;background:#f1f7f0;padding:12px 13px;border-radius:9px}
+@media(max-width:700px){
+ .customer-qualifier{font-size:9px;padding:7px 8px}
+ .lead-followup-cta{align-items:stretch;flex-direction:column}
+ .lead-followup-cta .btn{align-self:stretch}
+ .followup-tools{padding:0 15px 15px}
+ .followup-tools .select-wrap{min-width:0;max-width:75%}
+ .followup-tools .select-wrap select{max-width:100%;font-size:11px}
+ .task-header{align-items:flex-start}
+ .lead-received-banner{flex-wrap:wrap;gap:8px}
+ .lead-received-banner>strong{margin-left:28px}
+}
