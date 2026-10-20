@@ -70,6 +70,16 @@ alter table public.contacts enable row level security;
 alter table public.jobs enable row level security;
 alter table public.tasks enable row level security;
 
+-- Explicit API privileges. New-table auto exposure can safely remain disabled.
+-- RLS continues to restrict every authenticated user to their own workspace.
+grant usage on schema public to authenticated;
+grant select on public.workspaces to authenticated;
+grant update (name, review_link) on public.workspaces to authenticated;
+grant select on public.workspace_members to authenticated;
+grant select, insert, update, delete on public.contacts to authenticated;
+grant select, insert, update, delete on public.jobs to authenticated;
+grant select, insert, update, delete on public.tasks to authenticated;
+
 -- Membership policy is deliberately non-recursive.
 create policy "Members read own memberships" on public.workspace_members
  for select to authenticated using (user_id=auth.uid());
