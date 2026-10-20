@@ -112,6 +112,14 @@ function App(){
  useEffect(()=>{if(!connected){localStorage.setItem("jamrock_demo_tasks",JSON.stringify(tasks));}},[tasks]);
  useEffect(()=>{if(connected&&session)reload();if(connected&&!session){setContacts([]);setJobs([]);setTasks([]);setWorkspace(null);setLoading(false);}},[session?.user?.id]);
  useEffect(()=>{if(!toast)return;const t=setTimeout(()=>setToast(""),3800);return()=>clearTimeout(t);},[toast]);
+ // Keep the open dashboard and pipeline fresh as new website forms arrive.
+ useEffect(()=>{
+   if(!connected||!session?.user?.id)return;
+   const refresh=()=>{if(document.visibilityState==="visible")reload();};
+   const timer=window.setInterval(refresh,20000);
+   window.addEventListener("focus",refresh);
+   return()=>{window.clearInterval(timer);window.removeEventListener("focus",refresh);};
+ },[session?.user?.id]);
  async function reload(){
   try{setLoading(true);setError("");
    const member=await db.from("workspace_members").select("workspace_id,role,workspaces(id,name,review_link)").eq("user_id",session.user.id).limit(1).maybeSingle();
@@ -164,7 +172,7 @@ function App(){
     await upsert("jobs",{contact_id:c.id,service:form.service||"Junk removal",source:form.source||"Website",stage:"new",estimate_amount:null,final_amount:null,scheduled_at:null,notes:form.notes||"",created_at:new Date().toISOString()},setJobs);
    }
    if(modal==="contact")await upsert("contacts",{id:form.id,name:form.name.trim(),phone:form.phone||"",email:form.email||"",address:form.address||"",notes:form.notes||""},setContacts);
-   if(modal==="job")await upsert("jobs",{id:form.id,contact_id:form.contact_id,service:form.service||"Junk removal",source:form.source||"Other",stage:form.stage||"new",estimate_amount:form.estimate_amount===""||form.estimate_amount==null?null:Number(form.estimate_amount),final_amount:form.final_amount===""||form.final_amount==null?null:Number(form.final_amount),scheduled_at:form.scheduled_at?new Date(form.scheduled_at).toISOString():null,notes:form.notes||"",created_at:form.created_at||new Date().toISOString()},setJobs);
+   if(modal==="job")await upsert("jobs",{id:form.id,contact_id:form.contact_id,service:form.service||"Junk removal",source:form.source||"Other",stage:form.stage||"new",estimate_amount:form.estimate_amount===""||form.estimate_amount==null?null:Number(form.estimate_amount),final_amount:form.final_amount===""||form.final_amount==null?null:Number(form.final_amount),scheduled_at:form.scheduled_at?new Date(form.scheduled_at).toISOString():null,notes:form.notes||"",lead_details:form.lead_details||{},created_at:form.created_at||new Date().toISOString()},setJobs);
    if(modal==="task")await upsert("tasks",{id:form.id,title:form.title.trim(),contact_id:form.contact_id||null,job_id:form.job_id||null,due_at:form.due_at?new Date(form.due_at).toISOString():new Date().toISOString(),completed:Boolean(form.completed),created_at:form.created_at||new Date().toISOString()},setTasks);
    setModal(null);setToast("Saved successfully");if(connected)await reload();
   }catch(e){setError(e.message||"Could not save. Please try again.");}finally{setSaving(false);}
@@ -219,7 +227,7 @@ function App(){
     <main className="page">
      {!connected&&<div className="demo-banner"><AlertCircle size={17}/><div><b>Preview workspace</b><span>Sample contacts and browser-only data. Not ready for actual client records until secure database setup.</span></div><button onClick={()=>changeTab("settings")}>Setup details <ArrowRight size={14}/></button></div>}
      {error&&<div className="error-banner"><AlertCircle size={17}/>{error}<button onClick={()=>setError("")} aria-label="Dismiss"><X size={16}/></button></div>}
-     <div className="page-heading"><div><div className="eyebrow">JAMROCK COMMAND CENTER</div><h1>{heading[0]}</h1><p>{heading[1]}</p></div><div className="heading-actions">{tab==="jobs"&&<button className="btn btn-outline" onClick={exportJobs}><Download size={17}/> Export</button>}{tab!=="settings"&&tab!=="jobs"&&<button className="btn btn-primary" onClick={()=>openModal("lead",{source:"Website"})}><Plus size={18}/> New lead</button>}</div></div>
+     <div className="page-heading"><div><div className="eyebrow">JAMROCK COMMAND CENTER</div><h1>{heading[0]}</h1><p>{heading[1]}</p></div><div className="heading-actions">{tab==="jobs"&&<button className="btn btn-outline" onClick={exportJobs}><Download size={17}/> Export</button>}{(tab==="dashboard"||tab==="pipeline")&&connected&&<button className="btn btn-outline" onClick={reload}><RotateCcw size={16}/> Refresh</button>}{tab!=="settings"&&tab!=="jobs"&&<button className="btn btn-primary" onClick={()=>openModal("lead",{source:"Website"})}><Plus size={18}/> New lead</button>}</div></div>
      {tab==="dashboard"&&<div className="content-stack">
        <div className="metric-grid">
         <div className="metric-card"><div className="metric-top"><span>New leads</span><div className="metric-icon blue"><Users size={19}/></div></div><strong>{newLeads}</strong><small>Awaiting first contact</small></div>
@@ -233,7 +241,7 @@ function App(){
        </div>
        <section className="panel"><div className="panel-top"><div><h2>Recent opportunities</h2><p>Your latest incoming jobs and estimates</p></div><button className="text-action" onClick={()=>changeTab("pipeline")}>Open pipeline <ArrowRight size={16}/></button></div><div className="jobs-list">{jobs.length?jobs.slice(0,5).map(jobRow):<Empty title="No leads yet" subtitle="Add your first lead to get started."/>}</div></section>
       </div>}
-     {tab==="pipeline"&&<div className="content-stack"><div className="section-utility"><div className="utility-note"><CircleDot size={16}/> Update lead stages as conversations move forward</div><button onClick={()=>openModal("lead",{source:"Phone"})} className="btn btn-outline"><Plus size={16}/> Add opportunity</button></div><div className="pipeline-board">{STAGES.filter(s=>s.id!=="lost").map(s=><div key={s.id} className="pipe-column"><div className="pipe-heading"><span className={"pipe-mark "+s.color}/><b>{s.label}</b><span>{jobs.filter(j=>j.stage===s.id).length}</span></div><div className="pipe-items">{jobs.filter(j=>j.stage===s.id).map(j=><div key={j.id} className="pipe-card"><div className="pipe-card-overline">{j.source||"Lead"}</div><button className="pipe-person" onClick={()=>openModal("job",{...j,scheduled_at:j.scheduled_at?new Date(j.scheduled_at).toISOString().slice(0,16):""})}>{person(j.contact_id)?.name||"Customer"} <ArrowUpRight size={15}/></button><span>{j.service}</span><div className="pipe-card-bottom"><b>{j.estimate_amount==null?"No quote":money(j.estimate_amount)}</b><select aria-label={"Change stage for "+j.service} value={j.stage} onChange={e=>setJobStage(j,e.target.value)}>{STAGES.map(st=><option key={st.id} value={st.id}>{st.label}</option>)}</select></div></div>)}{!jobs.some(j=>j.stage===s.id)&&<div className="pipe-empty">No opportunities</div>}</div></div>)}</div>{jobs.some(j=>j.stage==="lost")&&<div className="closed-note">Lost opportunities: {jobs.filter(j=>j.stage==="lost").length}. View and edit them in Jobs & estimates.</div>}</div>}
+     {tab==="pipeline"&&<div className="content-stack"><div className="section-utility"><div className="utility-note"><CircleDot size={16}/> Update lead stages as conversations move forward</div><button onClick={()=>openModal("lead",{source:"Phone"})} className="btn btn-outline"><Plus size={16}/> Add opportunity</button></div><div className="pipeline-board">{STAGES.filter(s=>s.id!=="lost").map(s=><div key={s.id} className="pipe-column"><div className="pipe-heading"><span className={"pipe-mark "+s.color}/><b>{s.label}</b><span>{jobs.filter(j=>j.stage===s.id).length}</span></div><div className="pipe-items">{jobs.filter(j=>j.stage===s.id).map(j=><div key={j.id} className="pipe-card"><div className="pipe-card-overline">{j.source||"Lead"}</div><button className="pipe-person" onClick={()=>openModal("job",{...j,scheduled_at:j.scheduled_at?new Date(j.scheduled_at).toISOString().slice(0,16):""})}>{person(j.contact_id)?.name||"Customer"} <ArrowUpRight size={15}/></button><span>{j.service}</span>{j.lead_details?.zip&&<span className="pipe-quote-meta">ZIP {j.lead_details.zip}{j.lead_details.timeline?" · "+j.lead_details.timeline:""}</span>}<div className="pipe-card-bottom"><b>{j.estimate_amount==null?"No quote":money(j.estimate_amount)}</b><select aria-label={"Change stage for "+j.service} value={j.stage} onChange={e=>setJobStage(j,e.target.value)}>{STAGES.map(st=><option key={st.id} value={st.id}>{st.label}</option>)}</select></div></div>)}{!jobs.some(j=>j.stage===s.id)&&<div className="pipe-empty">No opportunities</div>}</div></div>)}</div>{jobs.some(j=>j.stage==="lost")&&<div className="closed-note">Lost opportunities: {jobs.filter(j=>j.stage==="lost").length}. View and edit them in Jobs & estimates.</div>}</div>}
      {tab==="jobs"&&<div className="content-stack">
       <section className="panel list-panel">
        <div className="records-tabs" role="tablist" aria-label="Jobs and estimates">
@@ -279,6 +287,22 @@ function App(){
      <label>Notes<textarea rows={3} value={form.notes||""} onChange={e=>setForm({...form,notes:e.target.value})} placeholder="Anything the team should know"/></label>
     </>}
     {modal==="job"&&<>
+      {form.lead_details&&Object.keys(form.lead_details).length>0&&<section className="intake-details">
+       <div className="intake-heading"><div><b><ClipboardList size={17}/> Website quote request</b><span>Answers received directly from Jamrock's website</span></div><span className="intake-new">Website lead</span></div>
+       <div className="intake-grid">
+        {[
+          ["Junk type","junk_type"],["Amount to remove","junk_amount"],
+          ["Junk location","junk_location"],["Needed by","timeline"],
+          ["Quote preference","budget_preference"],["ZIP code","zip"]
+        ].map(([label,key])=><div key={key}><span>{label}</span><strong>{form.lead_details[key]||"Not provided"}</strong></div>)}
+       </div>
+       <div className="intake-source"><MapPin size={15}/><span>Source: {form.source||"Jamrock Website Quiz"}</span>{form.lead_details.page_url&&<a href={form.lead_details.page_url} target="_blank" rel="noopener noreferrer">View source page <ExternalLink size={14}/></a>}</div>
+      </section>}
+      {form.contact_id&&person(form.contact_id)&&<div className="intake-customer">
+       <div className="avatar">{initials(person(form.contact_id).name)}</div><div><b>{person(form.contact_id).name}</b><span>Customer contact</span></div>
+       {person(form.contact_id).phone&&<a href={"tel:"+person(form.contact_id).phone} className="intake-contact-link"><Phone size={15}/> Call</a>}
+       {person(form.contact_id).email&&<a href={"mailto:"+person(form.contact_id).email} className="intake-contact-link"><Mail size={15}/> Email</a>}
+      </div>}
       <div className="form-grid"><label>Customer *<select required value={form.contact_id||""} onChange={e=>setForm({...form,contact_id:e.target.value})}><option value="">Choose a customer</option>{contacts.map(c=><option key={c.id} value={c.id}>{c.name}</option>)}</select></label><label>Service *<input required value={form.service||""} onChange={e=>setForm({...form,service:e.target.value})} placeholder="e.g. Furniture removal"/></label></div>
       <div className="form-grid"><label>Stage<select value={form.stage||"new"} onChange={e=>setForm({...form,stage:e.target.value})}>{STAGES.map(s=><option key={s.id} value={s.id}>{s.label}</option>)}</select></label><label>Lead source<select value={form.source||"Phone"} onChange={e=>setForm({...form,source:e.target.value})}>{["Website","Google","Phone","Referral","Facebook","Other"].map(x=><option key={x}>{x}</option>)}</select></label></div>
       <div className="form-grid"><label>Estimate ($)<input min="0" step="0.01" type="number" value={form.estimate_amount??""} onChange={e=>setForm({...form,estimate_amount:e.target.value})} placeholder="0"/></label><label>Final job value ($)<input min="0" step="0.01" type="number" value={form.final_amount??""} onChange={e=>setForm({...form,final_amount:e.target.value})} placeholder="0"/></label></div>
