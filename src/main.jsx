@@ -12,8 +12,10 @@ import {
 import "./styles.css";
 
 const LOGO = "https://assets.cdn.filesafe.space/bF1dT8IAVuvat84LkAVe/media/6ab1c9e4bdaa5e26a97f4bc3.png";
-const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
-const KEY = import.meta.env.VITE_SUPABASE_ANON_KEY;
+// Public Supabase client configuration. Vercel environment variables take precedence.
+// This publishable key is designed for browser use; row-level security protects data.
+const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL || "https://yvqduodposlpcimqqewc.supabase.co";
+const KEY = import.meta.env.VITE_SUPABASE_ANON_KEY || "sb_publishable_zOoOkyUHSgYYerM7Ig-dyw_yFOhSbY9";
 const connected = Boolean(SUPABASE_URL && KEY);
 const db = connected ? createClient(SUPABASE_URL, KEY) : null;
 const STAGES = [
