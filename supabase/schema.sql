@@ -43,6 +43,7 @@ create table if not exists public.jobs (
  final_amount numeric(12,2) check(final_amount>=0),
  scheduled_at timestamptz,
  notes text not null default '',
+ lead_details jsonb not null default '{}'::jsonb,
  created_at timestamptz not null default now(),
  constraint job_contact_same_workspace foreign key(contact_id,workspace_id) references public.contacts(id,workspace_id) on delete cascade,
  unique(id,workspace_id)
@@ -56,6 +57,8 @@ create table if not exists public.tasks (
  contact_id uuid,
  job_id uuid,
  title text not null check(char_length(trim(title))>0),
+ category text not null default 'follow_up' check (category in ('follow_up','no_answer','unresponsive','waiting_on_customer')),
+ notes text not null default '',
  due_at timestamptz not null default now(),
  completed boolean not null default false,
  created_at timestamptz not null default now(),
